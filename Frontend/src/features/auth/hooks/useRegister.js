@@ -16,6 +16,7 @@ export const useRegister = () => {
             setSuccessMessage(data.message);
             return data;
         } catch (err) {
+            console.log(err.response);
             const errorMessage = err.response?.data?.message || "An error occurred during registration.";
             setError(errorMessage);
             throw err;

@@ -1,9 +1,11 @@
-import RegisterPage from "./features/auth/pages/RegisterPage";
+import { router } from "./router/router";
+import { RouterProvider } from "react-router-dom";
+import { AuthProvider } from "./features/auth/context/AuthContext";
 const App = () => {
   return (
-    <div>
-      <RegisterPage />
-    </div>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   )
 }
 

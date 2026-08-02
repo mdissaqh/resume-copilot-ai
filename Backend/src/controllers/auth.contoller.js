@@ -26,7 +26,7 @@ export const registerUser = async (req, res) => {
         }
         const doUserExist = await userModel.findOne({ email });
         if (doUserExist) {
-            return res.status(409).json({ message: "User already exists" });
+            return res.status(409).json({ message: "User already exists", success: false });
         }
         const user = await userModel.create({ name, email, password });
         const token = generateToken(user);
