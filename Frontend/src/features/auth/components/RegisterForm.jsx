@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useRegister } from '../hooks/useRegister';
 import style from '../styles/RegisterForm.module.css';
+import { Link } from 'react-router-dom';
+import GoogleAuthButton from './GoogleAuthButton';
+
 const RegisterForm = () => {
     const { register, loading, error, successMessage } = useRegister();
     const [formData, setFormData] = useState({
@@ -74,6 +77,9 @@ const RegisterForm = () => {
                 {loading ? 'Creating Account...' : 'Sign Up'}
             </button>
         </form>
+        <div className={style.divider}>OR</div>
+        <GoogleAuthButton actionText="Sign up" />
+        <p>Already have an account? <Link to="/login">Log in</Link></p>
       </div>
     </div>
   )

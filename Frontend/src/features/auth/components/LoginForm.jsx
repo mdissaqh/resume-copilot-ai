@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLogin } from "../hooks/useLogin";
 import styles from "../styles/RegisterForm.module.css";
 import { Link } from "react-router-dom";
+import GoogleAuthButton from "./GoogleAuthButton";
 
 const LoginForm = () => {
     const { loginUser, loading, error } = useLogin();
@@ -63,7 +64,9 @@ const LoginForm = () => {
                         {loading ? 'Logging in...' : 'Login'}
                     </button>
                 </form>
-                <p style={{ marginTop: "15px", textAlign: "center", fontSize: "14px" }}>
+                <div className={styles.divider}>OR</div>
+                <GoogleAuthButton actionText="Login" />
+                <p>
                     Don't have an account? <Link to="/register">Sign up here</Link>
                 </p>
             </div>
