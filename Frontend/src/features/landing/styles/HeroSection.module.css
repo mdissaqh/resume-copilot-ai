@@ -1,0 +1,72 @@
+.heroContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    text-align: center;
+    padding: 0 20px;
+    background: linear-gradient(135deg, #f4f7f6 0%, #e0eafc 100%)
+}
+
+.title {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    margin-bottom: 20px;
+    max-width: 800px;
+    line-height: 1.2;
+}
+
+.highlight {
+    color: #0066ff;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: #4a4a4a;
+    margin-bottom: 40px;
+    max-width: 600px;
+}
+
+.buttonGroup {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.primaryButton, .secondaryButton {
+    padding: 16px 32px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.primaryButton {
+    background-color: #0066ff;
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
+}
+
+.primaryButton:hover {
+    background-color: #0052cc;
+    transform: translateY(-2px);
+}
+
+.secondaryButton {
+    background-color: #ffffff;
+    color: #0066ff;
+    border: 2px solid #0066ff;
+}
+
+.secondaryButton:hover {
+    background-color: #f0f7ff;
+    transform: translateY(-2px);
+}
