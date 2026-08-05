@@ -4,6 +4,8 @@ import styles from "../styles/DropZoneArea.module.css";
 
 export const DropzoneArea = () => {
     const [selectedFile, setSelectedFile] = useState(null);
+    const [hasJobDescription, setHasJobDescription] = useState(null);
+    const [jobDescription, setJobDescription] = useState("");
 
     const onDrop = useCallback((acceptedFiles) => {
         if (acceptedFiles.length > 0) {
@@ -33,6 +35,15 @@ export const DropzoneArea = () => {
 
     const handleProceed = () => {
         console.log("File:", selectedFile.name);
+        console.log("Analyzing with JD?", hasJobDescription);
+        if (hasJobDescription) {
+            console.log("JD Text:", jobDescription);
+        }
+    };
+    const handleRemoveFile = () => {
+        setSelectedFile(null);
+        setHasJobDescription(null);
+        setJobDescription("");
     };
 
     return (
@@ -58,18 +69,46 @@ export const DropzoneArea = () => {
                     <div className={styles.filePreview}>
                         <span className={styles.fileName}>📄 {selectedFile.name}</span>
                         <button
-                            onClick={() => {
-                                setSelectedFile(null)
-                            }}
+                            onClick={handleRemoveFile}
                             style={{ background: 'none', border: 'none', color: '#d93025', cursor: 'pointer', fontWeight: 'bold' }}
                         >
                             Remove
                         </button>
                     </div>
 
-                    <button className={styles.proceedBtn} onClick={handleProceed}>
-                        Analyze Resume →
-                    </button>
+                    <div className={styles.jdSection}>
+                        <label className={styles.jdLabel}>Do you have a target Job Description?</label>
+                        <div className={styles.toggleGroup}>
+                            <button
+                                className={`${styles.toggleBtn} ${hasJobDescription === true ? styles.toggleBtnActive : ''}`}
+                                onClick={() => setHasJobDescription(true)}
+                            >
+                                Yes, I have one
+                            </button>
+                            <button
+                                className={`${styles.toggleBtn} ${hasJobDescription === false ? styles.toggleBtnActive : ''}`}
+                                onClick={() => {
+                                    setHasJobDescription(false);
+                                    setJobDescription("");
+                                }}
+                            >
+                                No, skip this
+                            </button>
+                        </div>
+                        {hasJobDescription && (
+                            <textarea
+                                className={styles.textarea}
+                                placeholder="Paste the job description here..."
+                                value={jobDescription}
+                                onChange={(e) => setJobDescription(e.target.value)}
+                            />
+                        )}
+                    </div>
+                    {hasJobDescription !== null && (
+                        <button className={styles.proceedBtn} onClick={handleProceed}>
+                            {hasJobDescription ? "Analyze with Job Description →" : "Run Generic Analysis →"}
+                        </button>
+                    )}
                 </>
             )}
         </div>
