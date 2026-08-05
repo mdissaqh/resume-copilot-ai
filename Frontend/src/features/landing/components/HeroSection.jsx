@@ -4,7 +4,7 @@ import styles from "../styles/HeroSection.module.css";
 
 export const HeroSection = () => {
     return (
-        <div className={styles.heroContainer}>
+        <section className={styles.heroContainer}>
             <h1 className={styles.title}>
                 Build <span className={styles.highlight}>ATS-Friendly</span> Resumes in Minutes
             </h1>
@@ -20,6 +20,6 @@ export const HeroSection = () => {
                     ✨ Create from Scratch
                 </Link>
             </div>
-        </div>
+        </section>
     )
 }
