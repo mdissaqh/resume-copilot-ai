@@ -3,6 +3,7 @@ import RegisterPage from "../features/auth/pages/RegisterPage";
 import LoginPage from "../features/auth/pages/LoginPage";
 import LandingPage from "../features/landing/pages/LandingPage";
 import RootLayout from "../components/layout/RootLayout";
+import UploadPage from "../features/upload/pages/UploadPage"
 
 export const router = createBrowserRouter([
     {
@@ -20,6 +21,10 @@ export const router = createBrowserRouter([
             {
                 path: "/login",
                 element: <LoginPage />
+            },
+            {
+                path: "/upload",
+                element: <UploadPage />
             }
         ]
     }
