@@ -1,4 +1,4 @@
-import { extractTextFromPDF } from "../services/documentParser.service.js";
+import { extractTextFromPDF, extractTextFromDOCX } from "../services/documentParser.service.js";
 
 export const analyzeResume = async (req, res) => {
     try {
@@ -19,9 +19,11 @@ export const analyzeResume = async (req, res) => {
 
         if(file.mimetype === "application/pdf"){
             parsedText = await extractTextFromPDF(file.buffer);
+        } else if(file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+            parsedText = await extractTextFromDOCX(file.buffer)
         } else {
-            return res.status(501).json({
-                message: "DOCX parsing is not yet implemented."
+            return res.status(400).json({
+                message: "Unsupported file format. Please upload a PDF or DOCX."
             })
         }
         console.log("Successfully extracted text length:", parsedText.length);
