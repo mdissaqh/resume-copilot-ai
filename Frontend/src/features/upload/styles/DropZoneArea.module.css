@@ -98,14 +98,69 @@
 }
 
 .proceedBtn:hover {
-  background-color: #0052cc;
+    background-color: #0052cc;
+}
+
+.jdSection {
+    margin-top: 24px;
+    text-align: left;
+    width: 100%;
+    max-width: 500px;
+}
+
+.jdLabel {
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.toggleGroup {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.toggleBtn {
+    flex: 1;
+    padding: 10px;
+    background-color: #f4f7f6;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    color: #4a4a4a;
+    transition: all 0.2s;
+}
+
+.toggleBtnActive {
+  background-color: #e0eafc;
+  border-color: #0066ff;
+  color: #0066ff;
+}
+
+.textarea {
+    width: 100%;
+    min-height: 150px;
+    padding: 12px;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 16px;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #0066ff;
 }
 
 @media (max-width: 768px) {
-  .dropzone {
-    padding: 40px 16px;
-  }
-  .title {
-    font-size: 1.5rem;
-  }
+    .dropzone {
+        padding: 40px 16px;
+    }
+
+    .title {
+        font-size: 1.5rem;
+    }
 }
