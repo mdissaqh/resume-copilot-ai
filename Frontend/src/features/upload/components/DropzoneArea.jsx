@@ -1,11 +1,14 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import styles from "../styles/DropZoneArea.module.css";
+import { analyzeResumeApi } from "../api/upload.api";
 
 export const DropzoneArea = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [hasJobDescription, setHasJobDescription] = useState(null);
     const [jobDescription, setJobDescription] = useState("");
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [error, setError] = useState(null);
 
     const onDrop = useCallback((acceptedFiles) => {
         if (acceptedFiles.length > 0) {
@@ -33,11 +36,18 @@ export const DropzoneArea = () => {
         return styles.dropzone;
     };
 
-    const handleProceed = () => {
-        console.log("File:", selectedFile.name);
-        console.log("Analyzing with JD?", hasJobDescription);
-        if (hasJobDescription) {
-            console.log("JD Text:", jobDescription);
+    const handleProceed = async () => {
+        setIsAnalyzing(true);
+        setError(null);
+
+        try {
+            const analysisResults = await analyzeResumeApi(selectedFile, jobDescription);
+            console.log("Success! AI Results:", analysisResults);
+        } catch (err) {
+            console.error("Failed to analyze resume:", err);
+            setError("An error occurred while analyzing your resume. Please try again.");
+        } finally {
+            setIsAnalyzing(false);
         }
     };
     const handleRemoveFile = () => {
@@ -70,6 +80,7 @@ export const DropzoneArea = () => {
                         <span className={styles.fileName}>📄 {selectedFile.name}</span>
                         <button
                             onClick={handleRemoveFile}
+                            disabled={isAnalyzing}
                             style={{ background: 'none', border: 'none', color: '#d93025', cursor: 'pointer', fontWeight: 'bold' }}
                         >
                             Remove
@@ -82,6 +93,7 @@ export const DropzoneArea = () => {
                             <button
                                 className={`${styles.toggleBtn} ${hasJobDescription === true ? styles.toggleBtnActive : ''}`}
                                 onClick={() => setHasJobDescription(true)}
+                                disabled={isAnalyzing}
                             >
                                 Yes, I have one
                             </button>
@@ -91,6 +103,7 @@ export const DropzoneArea = () => {
                                     setHasJobDescription(false);
                                     setJobDescription("");
                                 }}
+                                disabled={isAnalyzing}
                             >
                                 No, skip this
                             </button>
@@ -100,13 +113,20 @@ export const DropzoneArea = () => {
                                 className={styles.textarea}
                                 placeholder="Paste the job description here..."
                                 value={jobDescription}
+                                disabled={isAnalyzing}
                                 onChange={(e) => setJobDescription(e.target.value)}
                             />
                         )}
                     </div>
                     {hasJobDescription !== null && (
-                        <button className={styles.proceedBtn} onClick={handleProceed}>
-                            {hasJobDescription ? "Analyze with Job Description →" : "Run Generic Analysis →"}
+                        <button className={styles.proceedBtn} onClick={handleProceed}
+                            style={{
+                                opacity: isAnalyzing ? 0.7 : 1,
+                                cursor: isAnalyzing ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {isAnalyzing ? "Analyzing Document..." :
+                                (hasJobDescription ? "Analyze with Job Description →" : "Run Generic Analysis →")}
                         </button>
                     )}
                 </>
