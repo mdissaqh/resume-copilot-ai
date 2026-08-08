@@ -1,3 +1,5 @@
+import { extractTextFromPDF } from "../services/documentParser.service.js";
+
 export const analyzeResume = async (req, res) => {
     try {
         const file = req.file;
@@ -13,11 +15,20 @@ export const analyzeResume = async (req, res) => {
             console.log("Job Description provided.");
         }
 
-        const parsedText = "This will be the extracted text.";
+        let parsedText = "";
+
+        if(file.mimetype === "application/pdf"){
+            parsedText = await extractTextFromPDF(file.buffer);
+        } else {
+            return res.status(501).json({
+                message: "DOCX parsing is not yet implemented."
+            })
+        }
+        console.log("Successfully extracted text length:", parsedText.length);
 
         res.status(200).json({
             message: "File successfully received and validated by the backend!",
-            fileReceived: file.originalname,
+            extractedTextPreview: parsedText.substring(0, 200) + "...",
             hasJobDescription: !!jobDescription
         });
     } catch (error) {
