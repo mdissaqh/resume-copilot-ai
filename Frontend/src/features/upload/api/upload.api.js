@@ -5,7 +5,7 @@ export const analyzeResumeApi = async (file, jobDescription) => {
 
     formData.append("resume", file);
 
-    if(jobDescription){
+    if (jobDescription) {
         formData.append("jobDescription", jobDescription);
     }
 
@@ -13,3 +13,8 @@ export const analyzeResumeApi = async (file, jobDescription) => {
 
     return response.data;
 }
+
+export const migrateGuestAnalysisApi = async (guestData) => {
+    const response = await axiosInstance.post("/analyze/migrate-guest", guestData);
+    return response.data;
+};

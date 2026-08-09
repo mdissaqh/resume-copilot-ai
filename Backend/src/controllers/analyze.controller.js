@@ -47,3 +47,36 @@ export const analyzeResume = async (req, res) => {
         res.status(500).json({ message: "An error occurred during analysis." });
     }
 }
+
+export const migrateGuestAnalysis = async (req, res) => {
+    try {
+        const guestData = req.body;
+        
+        if (!guestData || !guestData.extractedText || !guestData.analysisResult) {
+            return res.status(400).json({ success: false, message: "Invalid guest data format." });
+        }
+
+        const existingAnalysis = await Analysis.findOne({
+            userId: req.user._id,
+            extractedText: guestData.extractedText
+        });
+
+        if (existingAnalysis) {
+            return res.status(200).json({ success: true, message: "Analysis already migrated." });
+        }
+
+        await Analysis.create({
+            userId: req.user._id,
+            extractedText: guestData.extractedText,
+            jobDescription: guestData.jobDescription || "",
+            analysisResults: guestData.analysisResult
+        });
+
+        console.log("Guest analysis successfully migrated for user:", req.user.email);
+        
+        res.status(200).json({ success: true, message: "Guest data migrated successfully." });
+    } catch (error) {
+        console.error("Error migrating guest analysis:", error);
+        res.status(500).json({ success: false, message: "Internal server error during migration." });
+    }
+};

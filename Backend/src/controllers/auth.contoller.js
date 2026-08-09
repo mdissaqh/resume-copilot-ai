@@ -108,7 +108,7 @@ export const googleAuthCallback = (req, res) => {
 
         const token = generateToken(user);
         res.cookie("token", token, cookieOptions);
-        res.redirect(`${process.env.CLIENT_URL}`);
+        res.redirect(`${process.env.CLIENT_URL}/upload`);
     } catch (error) {
         console.error("Error in Google auth callback:", error);
         res.redirect(`${process.env.CLIENT_URL}/login?error=Authentication failed`);
