@@ -3,8 +3,10 @@ import { useDropzone } from "react-dropzone";
 import styles from "../styles/DropZoneArea.module.css";
 import { analyzeResumeApi } from "../api/upload.api";
 import { AnalysisResults } from './AnalysisResults';
+import { useAuth } from "../../auth/hooks/useAuth";
 
 export const DropzoneArea = () => {
+    const { isAuthenticated } = useAuth();
     const [selectedFile, setSelectedFile] = useState(null);
     const [hasJobDescription, setHasJobDescription] = useState(null);
     const [jobDescription, setJobDescription] = useState("");
@@ -34,7 +36,7 @@ export const DropzoneArea = () => {
 
     const getDropzoneClassName = () => {
         if (isDragReject) return `${styles.dropzone} ${styles.dropzoneReject}`;
-        if (isDragActive) return `${styles.dropzone} ${styles.dropzoneActive}`
+        if (isDragActive) return `${styles.dropzone} ${styles.dropzoneActive}`;
         return styles.dropzone;
     };
 
@@ -46,6 +48,16 @@ export const DropzoneArea = () => {
             const response = await analyzeResumeApi(selectedFile, jobDescription);
             console.log("Success! AI Results:", response);
             setAnalysisResult(response.analysis);
+
+            if (!isAuthenticated) {
+                const guestData = {
+                    extractedText: response.parsedText,
+                    jobDescription: jobDescription,
+                    analysisResult: response.analysis,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem("guest_analysis", JSON.stringify(guestData));
+            }
         } catch (err) {
             console.error("Failed to analyze resume:", err);
             setError("An error occurred while analyzing your resume. Please try again.");
@@ -53,6 +65,7 @@ export const DropzoneArea = () => {
             setIsAnalyzing(false);
         }
     };
+
     const handleReset = () => {
         setSelectedFile(null);
         setHasJobDescription(null);

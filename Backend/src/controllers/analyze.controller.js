@@ -1,5 +1,6 @@
 import { extractTextFromPDF, extractTextFromDOCX } from "../services/documentParser.service.js";
 import { generateResumeAnalysis } from "../services/ai.service.js";
+import Analysis from "../models/analysis.model.js";
 
 export const analyzeResume = async (req, res) => {
     try {
@@ -8,13 +9,8 @@ export const analyzeResume = async (req, res) => {
         if (!file) {
             return res.status(400).json({ message: "Resume file is required." });
         }
-        console.log(file);
-
+        
         console.log(`Received file: ${file.originalname} (${file.size} bytes)`);
-
-        if (jobDescription) {
-            console.log("Job Description provided.");
-        }
 
         let parsedText = "";
 
@@ -27,14 +23,24 @@ export const analyzeResume = async (req, res) => {
                 message: "Unsupported file format. Please upload a PDF or DOCX."
             })
         }
-        console.log("Successfully extracted text length:", parsedText.length);
 
         console.log("Sending data to AI for analysis...");
         const aiAnalysisResult = await generateResumeAnalysis(parsedText, jobDescription);
 
+        if (req.user) {
+            await Analysis.create({
+                userId: req.user._id,
+                extractedText: parsedText,
+                jobDescription: jobDescription || "",
+                analysisResults: aiAnalysisResult
+            });
+            console.log("Analysis securely saved to MongoDB for user:", req.user.email);
+        }
+
         res.status(200).json({
             message: "Resume analyzed successfully!",
-            analysis: aiAnalysisResult
+            analysis: aiAnalysisResult,
+            parsedText: parsedText
         });
     } catch (error) {
         console.error("Error analyzing resume:", error);
