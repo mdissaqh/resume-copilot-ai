@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import styles from "../styles/DropZoneArea.module.css";
 import { analyzeResumeApi } from "../api/upload.api";
+import { AnalysisResults } from './AnalysisResults';
 
 export const DropzoneArea = () => {
     const [selectedFile, setSelectedFile] = useState(null);
@@ -9,6 +10,7 @@ export const DropzoneArea = () => {
     const [jobDescription, setJobDescription] = useState("");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [error, setError] = useState(null);
+    const [analysisResult, setAnalysisResult] = useState(null);
 
     const onDrop = useCallback((acceptedFiles) => {
         if (acceptedFiles.length > 0) {
@@ -41,8 +43,9 @@ export const DropzoneArea = () => {
         setError(null);
 
         try {
-            const analysisResults = await analyzeResumeApi(selectedFile, jobDescription);
-            console.log("Success! AI Results:", analysisResults);
+            const response = await analyzeResumeApi(selectedFile, jobDescription);
+            console.log("Success! AI Results:", response);
+            setAnalysisResult(response.analysis);
         } catch (err) {
             console.error("Failed to analyze resume:", err);
             setError("An error occurred while analyzing your resume. Please try again.");
@@ -50,11 +53,17 @@ export const DropzoneArea = () => {
             setIsAnalyzing(false);
         }
     };
-    const handleRemoveFile = () => {
+    const handleReset = () => {
         setSelectedFile(null);
         setHasJobDescription(null);
         setJobDescription("");
+        setError(null);
+        setAnalysisResult(null);
     };
+
+    if (analysisResult) {
+        return <AnalysisResults analysis={analysisResult} onReset={handleReset} />;
+    }
 
     return (
         <div className={styles.container}>
@@ -79,7 +88,7 @@ export const DropzoneArea = () => {
                     <div className={styles.filePreview}>
                         <span className={styles.fileName}>📄 {selectedFile.name}</span>
                         <button
-                            onClick={handleRemoveFile}
+                            onClick={handleReset}
                             disabled={isAnalyzing}
                             style={{ background: 'none', border: 'none', color: '#d93025', cursor: 'pointer', fontWeight: 'bold' }}
                         >
