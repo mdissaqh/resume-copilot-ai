@@ -114,3 +114,29 @@ export const googleAuthCallback = (req, res) => {
         res.redirect(`${process.env.CLIENT_URL}/login?error=Authentication failed`);
     }
 }
+
+export const getCurrentUser = async (req, res) => {
+    try {
+        res.status(200).json({
+            success: true,
+            user: {
+                name: req.user.name,
+                email: req.user.email,
+                id: req.user._id
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching current user:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+export const logoutUser = (req, res) => {
+    try {
+        res.clearCookie("token", cookieOptions);
+        res.status(200).json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+        console.error("Error logging out:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};

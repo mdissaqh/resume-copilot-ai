@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from "react";
-
+import { getCurrentUserApi, logoutUserApi } from "../api/auth.api";
 
 export const AuthContext = createContext();
 
@@ -9,16 +9,39 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setLoading(false);
+        const initAuth = async () => {
+            try {
+                const data = await getCurrentUserApi();
+                if (data.success && data.user) {
+                    setUser(data.user);
+                    setIsAuthenticated(true);
+                }
+            } catch (error) {
+                setUser(null);
+                setIsAuthenticated(false);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initAuth();
     }, []);
+
     const login = (userData) => {
         setUser(userData);
         setIsAuthenticated(true);
-    }
-    const logout = () => {
-        setUser(null);
-        setIsAuthenticated(false);
-    }
+    };
+
+    const logout = async () => {
+        try {
+            await logoutUserApi();
+            setUser(null);
+            setIsAuthenticated(false);
+        } catch (error) {
+            console.error("Logout failed", error);
+        }
+    };
+
     const value = {
         user,
         isAuthenticated,
@@ -26,10 +49,10 @@ export const AuthProvider = ({ children }) => {
         login,
         logout
     };
-    console.log(children);
+
     return (
         <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
-}
+};
