@@ -1,32 +1,19 @@
 .container {
     padding: 60px 20px;
-    text-align: center;
-    max-width: 600px;
+    max-width: 900px;
     margin: 0 auto;
 }
 
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
 .title {
-    margin-bottom: 20px;
     color: #1a1a1a;
-}
-
-.subtitle {
-    color: #4a4a4a;
-    font-size: 1.1rem;
-    margin-bottom: 30px;
-}
-
-.infoBox {
-    padding: 20px;
-    background-color: #f0f7ff;
-    border: 1px solid #cce4ff;
-    border-radius: 8px;
-    margin-bottom: 30px;
-}
-
-.infoText {
-    color: #0052cc;
-    font-weight: 500;
+    margin: 0;
 }
 
 .backLink {
@@ -37,4 +24,44 @@
 
 .backLink:hover {
     text-decoration: underline;
+}
+
+.loadingBox {
+    text-align: center;
+    padding: 60px;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    border: 1px dashed #dadce0;
+    color: #4a4a4a;
+    font-size: 1.1rem;
+}
+
+.errorBox {
+    padding: 20px;
+    background-color: #fff0f0;
+    border: 1px solid #facdcd;
+    color: #d93025;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.jsonViewer {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.successBox {
+    padding: 16px;
+    background-color: #e6f4ea;
+    border: 1px solid #ceead6;
+    color: #137333;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 500;
 }

@@ -17,6 +17,10 @@ const analysisSchema = new mongoose.Schema({
     analysisResults: {
         type: Object,
         required: true
+    },
+    generatedResume: {
+        type: Object,
+        default: null
     }
 }, { timestamps: true });
 

@@ -34,7 +34,6 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
         }`;
 
         const result = await model.generateContent(prompt);
-        console.log(result)
         const responseText = result.response.text();
         const analysisData = JSON.parse(responseText);
 
@@ -43,4 +42,104 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
         console.error("Gemini API Error:", error);
         throw new Error("Failed to generate AI analysis from Gemini.");
     }
-}
+};
+
+export const generateStructuredResume = async (resumeText, jobDescription) => {
+    try {
+        const model = genAI.getGenerativeModel({
+            model: "gemini-3.5-flash-lite",
+            generationConfig: { responseMimeType: "application/json" }
+        });
+
+        let prompt = `You are an elite Executive Resume Writer. Your task is to rewrite, format, and optimize the provided resume into a highly professional, ATS-optimized JSON structure.
+
+        CRITICAL RULES:
+        1. DO NOT HALLUCINATE OR FABRICATE. You must NOT invent jobs, companies, degrees, certifications, skills, metrics, projects, or achievements that are not explicitly present in the source text.
+        2. PROFESSION AGNOSTIC. Identify the candidate's profession (e.g., Software, Medical, Legal, Teaching, Finance) and categorize skills/sections appropriately for that industry.
+        3. OPTIMIZATION. Improve the wording to be action-oriented and impactful, but remain 100% truthful to the original text.`;
+
+        if (jobDescription) {
+            prompt += `\n4. TAILORING. A Job Description has been provided. Emphasize the existing skills and experiences that align best with this target role without fabricating anything:
+            "${jobDescription}"`;
+        }
+
+        prompt += `
+        
+        Original Resume Text:
+        "${resumeText}"
+
+        Return a RAW JSON object strictly following this structure:
+        {
+          "personalInfo": {
+            "fullName": "String",
+            "email": "String",
+            "phone": "String",
+            "location": "String",
+            "links": [{ "label": "String (e.g., LinkedIn, Portfolio)", "url": "String" }]
+          },
+          "professionalSummary": "String (Optimized summary)",
+          "experience": [
+            {
+              "organization": "String",
+              "role": "String",
+              "location": "String",
+              "startDate": "String",
+              "endDate": "String",
+              "description": "String (Optional brief context)",
+              "achievements": ["Array of Strings (Action-oriented bullet points)"]
+            }
+          ],
+          "education": [
+            {
+              "institution": "String",
+              "degree": "String",
+              "fieldOfStudy": "String",
+              "location": "String",
+              "startDate": "String",
+              "endDate": "String",
+              "highlights": ["Array of Strings (Optional)"]
+            }
+          ],
+          "skills": [
+            {
+              "category": "String (e.g., 'Technical Skills', 'Clinical Procedures', 'Languages')",
+              "items": ["Array of Strings"]
+            }
+          ],
+          "projects": [
+            {
+              "title": "String",
+              "role": "String (Optional)",
+              "date": "String (Optional)",
+              "url": "String (Optional)",
+              "description": "String",
+              "highlights": ["Array of Strings"]
+            }
+          ],
+          "certifications": [
+            { "name": "String", "issuer": "String", "date": "String" }
+          ],
+          "additionalSections": [
+            {
+              "sectionTitle": "String (e.g., Publications, Bar Admissions)",
+              "items": [
+                {
+                  "heading": "String",
+                  "subheading": "String",
+                  "date": "String",
+                  "description": "String"
+                }
+              ]
+            }
+          ]
+        }
+        Do NOT wrap in markdown, return only the JSON.`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        return JSON.parse(responseText);
+    } catch (error) {
+        console.error("Gemini Generation API Error:", error);
+        throw new Error("Failed to generate structured resume from Gemini.");
+    }
+};
