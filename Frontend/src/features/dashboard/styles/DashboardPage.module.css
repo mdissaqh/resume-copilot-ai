@@ -1,0 +1,131 @@
+.container {
+    padding: 40px 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.title {
+    color: #1a1a1a;
+}
+
+.subtitle {
+    margin-top: 20px;
+    margin-bottom: 20px;
+    color: #4a4a4a;
+}
+
+.errorBox {
+    color: #d93025;
+    padding: 12px;
+    background-color: #fff0f0;
+    border-radius: 8px;
+}
+
+.emptyState {
+    padding: 40px;
+    text-align: center;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    border: 1px dashed #dadce0;
+}
+
+.emptyText {
+    color: #70757a;
+    margin-bottom: 20px;
+}
+
+.analyzeText {
+    margin-bottom: 20px;
+}
+
+.analyzeLink {
+    background-color: #0066ff;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.analyzeLink:hover {
+    background-color: #0052cc;
+}
+
+.analysisList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.analysisCard {
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.cardTitle {
+    margin: 0 0 10px 0;
+    color: #1a1a1a;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.scoreBadge {
+    font-weight: 600;
+    color: #137333;
+    background-color: #e6f4ea;
+    padding: 4px 12px;
+    border-radius: 16px;
+}
+
+.dateText {
+    color: #70757a;
+    font-size: 0.9rem;
+}
+
+.buttonGroup {
+    display: flex;
+    gap: 12px;
+}
+
+.viewButton {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    background-color: #f4f7f6;
+    color: #4a4a4a;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    border: 1px solid #dadce0;
+    transition: background-color 0.2s;
+}
+
+.viewButton:hover {
+    background-color: #e2e8f0;
+}
+
+.buildButton {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    background-color: #0066ff;
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.buildButton:hover {
+    background-color: #0052cc;
+}

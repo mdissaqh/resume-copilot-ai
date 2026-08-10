@@ -3,7 +3,11 @@ import RegisterPage from "../features/auth/pages/RegisterPage";
 import LoginPage from "../features/auth/pages/LoginPage";
 import LandingPage from "../features/landing/pages/LandingPage";
 import RootLayout from "../components/layout/RootLayout";
-import UploadPage from "../features/upload/pages/UploadPage"
+import UploadPage from "../features/upload/pages/UploadPage";
+import ProtectedRoute from "../components/layout/ProtectedRoute";
+import DashboardPage from "../features/dashboard/pages/DashboardPage";
+import ViewAnalysisPage from "../features/dashboard/pages/ViewAnalysisPage";
+import BuilderPage from "../features/builder/pages/BuilderPage";
 
 export const router = createBrowserRouter([
     {
@@ -25,7 +29,31 @@ export const router = createBrowserRouter([
             {
                 path: "/upload",
                 element: <UploadPage />
+            },
+            {
+                path: "/dashboard",
+                element: (
+                    <ProtectedRoute>
+                        <DashboardPage />
+                    </ProtectedRoute>
+                )
+            },
+            {
+                path: "/dashboard/analysis/:id",
+                element: (
+                    <ProtectedRoute>
+                        <ViewAnalysisPage />
+                    </ProtectedRoute>
+                )
+            },
+            {
+                path: "/build/:id",
+                element: (
+                    <ProtectedRoute>
+                        <BuilderPage />
+                    </ProtectedRoute>
+                )
             }
         ]
     }
-])
+]);

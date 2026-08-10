@@ -6,6 +6,7 @@ import "./config/passport.js";
 import cors from "cors";
 import morgan from "morgan";
 import analyzeRouter from "./routes/analyze.routes.js";
+import resumeRouter from "./routes/resume.routes.js";
 
 const app = express();
     
@@ -20,5 +21,6 @@ app.use(cors({
 
 app.use("/api/auth", authRouter);
 app.use("/api/analyze", analyzeRouter)
+app.use("/api/resume", resumeRouter);
 
 export default app;

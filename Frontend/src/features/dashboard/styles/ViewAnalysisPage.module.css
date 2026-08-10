@@ -1,0 +1,53 @@
+.container {
+    padding: 40px 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.backLinkWrapper {
+    margin-bottom: 20px;
+}
+
+.backLink {
+    text-decoration: none;
+    color: #0066ff;
+    font-weight: 600;
+}
+
+.backLink:hover {
+    text-decoration: underline;
+}
+
+.loader {
+    text-align: center;
+    padding: 50px;
+    color: #4a4a4a;
+}
+
+.errorBox {
+    text-align: center;
+    padding: 50px;
+    color: #d93025;
+}
+
+.buildActionWrapper {
+    margin-top: 24px;
+    text-align: center;
+}
+
+.buildButton {
+    display: inline-block;
+    padding: 14px 32px;
+    background-color: #0066ff;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.buildButton:hover {
+    background-color: #0052cc;
+}

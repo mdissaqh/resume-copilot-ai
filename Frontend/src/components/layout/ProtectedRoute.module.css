@@ -1,0 +1,7 @@
+.loaderContainer {
+    display: flex;
+    justify-content: center;
+    margin-top: 50px;
+    font-size: 1.1rem;
+    color: #4a4a4a;
+}
