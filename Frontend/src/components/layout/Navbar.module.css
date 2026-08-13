@@ -1,123 +1,168 @@
 .header {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  background-color: #fff;
-  border-bottom: 1px solid #eaeaea;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background-color: #fff;
+    border-bottom: 1px solid #eaeaea;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px 24px;
 }
 
 .brandContainer {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
 }
 
 .logoImage {
-  height: 36px;
-  width: auto;
-  object-fit: contain;
+    height: 36px;
+    width: auto;
+    object-fit: contain;
 }
 
 .brandText {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  letter-spacing: -0.5px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: -0.5px;
 }
 
 .brandHighlight {
-  color: #0066ff;
+    color: #0066ff;
 }
 
-.authButtons {
-  display: flex;
-  gap: 16px;
-  align-items: center;
+.navLinks {
+    display: flex;
+    align-items: center;
+    gap: 20px;
 }
 
-.loginLink {
-  color: #4a4a4a;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
+.hamburger {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: #1a1a1a;
+    cursor: pointer;
+    padding: 4px;
 }
 
-.loginLink:hover {
-  color: #0066ff;
+.navLink, .loginLink {
+    color: #4a4a4a;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.navLink:hover, .loginLink:hover {
+    color: #0066ff;
 }
 
 .primaryBtn {
-  background-color: #0066ff;
-  color: #ffffff;
-  padding: 10px 20px;
-  border-radius: 6px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: background-color 0.2s;
+    background-color: #0066ff;
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: background-color 0.2s;
 }
 
-.primaryBtn:hover{
-  background-color: #0052cc;
+.primaryBtn:hover {
+    background-color: #0052cc;
+}
+
+.logoutBtn {
+    background: none;
+    border: 1px solid #dadce0;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    color: #4a4a4a;
+    transition: all 0.2s;
+}
+
+.logoutBtn:hover {
+    background-color: #f8f9fa;
+    border-color: #d2d2d2;
+}
+
+.userSection {
+    display: flex;
+    align-items: center;
+    max-width: 200px;
+}
+
+.greeting {
+    color: #4a4a4a;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 @media (max-width: 768px) {
-  .nav{
-    padding: 12px 16px;
-  }
+    .nav {
+        padding: 12px 16px;
+    }
 
-  .brandContainer{
-    gap: 8px;
-  }
+    .hamburger {
+        display: block;
+    }
 
-  .logoImage {
-    height: 28px;
-  }
+    .brandText {
+        font-size: 1.25rem;
+    }
 
-  .brandText {
-    font-size: 1.25rem;
-  }
+    .logoImage {
+        height: 28px;
+    }
 
-  .authButtons {
-    gap: 12px;
-  }
+    .navLinks {
+        display: none;
+        flex-direction: column;
+        align-items: flex-start;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background-color: #ffffff;
+        border-bottom: 1px solid #eaeaea;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        gap: 16px;
+    }
 
-  .primaryBtn {
-    padding: 8px 16px;
-    font-size: 0.9rem;
-  }
-}
+    .navLinksOpen {
+        display: flex;
+    }
 
-@media (max-width: 480px){
-  .nav {
-    padding: 10px 12px;
-  }
+    .userSection {
+        max-width: 100%;
+        width: 100%;
+    }
 
-  .logoImage {
-    height: 24px;
-  }
+    .greeting {
+        white-space: normal;
+        word-wrap: break-word;
+        border-bottom: 1px solid #eaeaea;
+        padding-bottom: 12px;
+        width: 100%;
+        display: block;
+    }
 
-  .brandText {
-    font-size: 1.1rem;
-    letter-spacing: 0;
-  }
-
-  .loginLink {
-    font-size: 0.9rem;
-  }
-
-  .primaryBtn {
-    padding: 6px 12px;
-    font-size: 0.9rem;
-  }
+    .primaryBtn, .logoutBtn {
+        width: 100%;
+        text-align: center;
+    }
 }

@@ -4,6 +4,7 @@
     height: calc(100vh - 70px);
     background-color: #f4f7f6;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .header {
@@ -13,6 +14,26 @@
     padding: 16px 24px;
     background-color: #ffffff;
     border-bottom: 1px solid #eaeaea;
+}
+
+.backLink {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background-color: #ffffff;
+    color: #4a4a4a;
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid #dadce0;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+.backLink:hover {
+    background-color: #f8f9fa;
+    color: #1a1a1a;
+    border-color: #d2d2d2;
 }
 
 .headerActions {
@@ -103,7 +124,7 @@
     }
 
     .editorPane, .previewPane {
-        display: none;
+        display: none; 
         padding: 16px;
     }
 

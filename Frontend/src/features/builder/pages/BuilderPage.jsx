@@ -14,6 +14,7 @@ const BuilderPage = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [isDirty, setIsDirty] = useState(false);
+    
     const [activeTab, setActiveTab] = useState("editor");
 
     useEffect(() => {
@@ -66,7 +67,10 @@ const BuilderPage = () => {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <Link to="/dashboard" className={styles.backLink}>&larr; Dashboard</Link>
+                <Link to="/dashboard" className={styles.backLink}>
+                    &larr; Dashboard
+                </Link>
+                
                 <div className={styles.headerActions}>
                     <span className={styles.statusText}>
                         {isDirty ? "Unsaved changes" : "All changes saved"}
@@ -77,7 +81,6 @@ const BuilderPage = () => {
                 </div>
             </div>
             
-            {/* Mobile Tabs */}
             <div className={styles.mobileTabs}>
                 <button 
                     className={`${styles.tabBtn} ${activeTab === 'editor' ? styles.activeTab : ''}`}

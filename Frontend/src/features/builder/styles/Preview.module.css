@@ -3,31 +3,23 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    padding: 40px 0;
-    overflow-x: hidden;
-}
-
-.scaleWrapper {
-    transform-origin: top center;
-    transition: transform 0.2s ease;
-    will-change: transform;
+    padding: 40px 20px;
+    box-sizing: border-box;
 }
 
 .paper {
-    width: 210mm;
+    width: 100%;
+    max-width: 210mm; 
     min-height: 297mm;
-
-    background-color: white;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    padding: 20mm;
+    
+    background-color: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    
+    padding: 8%; 
     box-sizing: border-box;
     font-family: "Times New Roman", Times, serif;
-    color: #000;
-    background-image: repeating-linear-gradient(to bottom,
-            transparent,
-            transparent calc(297mm - 2px),
-            #e0e0e0 calc(297mm - 2px),
-            #e0e0e0 297mm);
+    color: #000000;
+    line-height: 1.5;
 }
 
 .name {
@@ -94,4 +86,20 @@
 .summary {
     font-size: 14px;
     line-height: 1.6;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .previewContainer {
+        padding: 16px 8px;
+    }
+    .paper {
+        padding: 6%;
+        min-height: 141vw; 
+    }
+    
+    .name { font-size: 22px; }
+    .contactInfo, .summary, .bullets { font-size: 13px; }
+    .sectionTitle { font-size: 15px; }
+    .entryHeader, .entrySubheader { font-size: 14px; }
 }
