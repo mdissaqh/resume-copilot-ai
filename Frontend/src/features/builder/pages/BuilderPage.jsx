@@ -1,63 +1,90 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { generateResumeApi } from "../api/builder.api";
+import { generateResumeApi, saveResumeApi } from "../api/builder.api";
+import Editor from "../components/Editor/Editor";
+import Preview from "../components/Preview/Preview";
 import styles from "../styles/BuilderPage.module.css";
 
 const BuilderPage = () => {
     const { id } = useParams();
+    const [dbResumeId, setDbResumeId] = useState(null);
     const [resumeData, setResumeData] = useState(null);
+    
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
+    const [isDirty, setIsDirty] = useState(false);
 
     useEffect(() => {
         const fetchAndGenerate = async () => {
             try {
                 const data = await generateResumeApi(id);
-                setResumeData(data.resume);
+                setDbResumeId(data.resume._id);
+                setResumeData(data.resume.content);
             } catch (err) {
                 console.error("Generation failed:", err);
-                setError("Failed to generate the structured resume. Please try again.");
+                setError("Failed to load or generate the resume.");
             } finally {
                 setLoading(false);
             }
         };
-
         fetchAndGenerate();
     }, [id]);
+
+    // Deep state updater logic
+    const updateResumeData = useCallback((pathArray, value) => {
+        setResumeData(prev => {
+            const newData = JSON.parse(JSON.stringify(prev));
+            let current = newData;
+            for (let i = 0; i < pathArray.length - 1; i++) {
+                if (current[pathArray[i]] === undefined) current[pathArray[i]] = {};
+                current = current[pathArray[i]];
+            }
+            current[pathArray[pathArray.length - 1]] = value;
+            return newData;
+        });
+        setIsDirty(true);
+    }, []);
+
+    const handleSave = async () => {
+        if (!dbResumeId) return;
+        setSaving(true);
+        try {
+            await saveResumeApi(dbResumeId, resumeData);
+            setIsDirty(false);
+        } catch (err) {
+            console.error("Save failed:", err);
+            alert("Failed to save changes.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (error) return <div className={styles.errorBox}>{error}</div>;
+    if (loading) return <div className={styles.loadingBox}><p>✨ Preparing your professional workspace...</p></div>;
 
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h1 className={styles.title}>Resume Builder</h1>
-                <Link to={`/dashboard/analysis/${id}`} className={styles.backLink}>
-                    &larr; Back to Analysis
-                </Link>
+                <Link to="/dashboard" className={styles.backLink}>&larr; Dashboard</Link>
+                <div className={styles.headerActions}>
+                    <span className={styles.statusText}>
+                        {isDirty ? "Unsaved changes" : "All changes saved"}
+                    </span>
+                    <button className={styles.saveButton} onClick={handleSave} disabled={!isDirty || saving}>
+                        {saving ? "Saving..." : "Save Resume"}
+                    </button>
+                </div>
             </div>
             
-            {loading && (
-                <div className={styles.loadingBox}>
-                    <p>✨ AI is rewriting and structuring your resume...</p>
-                    <p style={{ fontSize: "0.9rem", color: "#70757a", marginTop: "10px" }}>
-                        This takes about 10-15 seconds. We are mapping your experience to our flexible templates.
-                    </p>
+            <div className={styles.workspace}>
+                <div className={styles.editorPane}>
+                    <Editor resumeData={resumeData} onChange={updateResumeData} />
                 </div>
-            )}
-
-            {error && <div className={styles.errorBox}>{error}</div>}
-
-            {!loading && resumeData && (
-                <>
-                    <div className={styles.successBox}>
-                        ✅ Success! The AI has successfully parsed and structured your data into our profession-agnostic JSON contract.
-                    </div>
-                    
-                    <h3 style={{ marginBottom: "16px", color: "#1a1a1a" }}>Raw JSON Output (For Verification):</h3>
-                    
-                    <pre className={styles.jsonViewer}>
-                        {JSON.stringify(resumeData, null, 2)}
-                    </pre>
-                </>
-            )}
+                <div className={styles.previewPane}>
+                    <Preview resumeData={resumeData} />
+                </div>
+            </div>
         </div>
     );
 };

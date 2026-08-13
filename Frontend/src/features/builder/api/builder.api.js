@@ -4,3 +4,8 @@ export const generateResumeApi = async (analysisId) => {
     const response = await axiosInstance.post(`/resume/${analysisId}/generate`);
     return response.data;
 };
+
+export const saveResumeApi = async (resumeId, content) => {
+    const response = await axiosInstance.put(`/resume/${resumeId}`, { content });
+    return response.data;
+};

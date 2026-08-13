@@ -1,0 +1,72 @@
+.section {
+    margin-bottom: 32px;
+}
+
+.sectionTitle {
+    font-size: 1.2rem;
+    color: #1a1a1a;
+    border-bottom: 2px solid #eaeaea;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+}
+
+.formGroup label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #4a4a4a;
+    margin-bottom: 6px;
+}
+
+.input, .textarea {
+    padding: 10px;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+}
+
+.textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.arrayItem {
+    border: 1px solid #eaeaea;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    background-color: #fafafa;
+}
+
+.itemHeader {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.controlBtn {
+    background: #eaeaea;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #4a4a4a;
+}
+.controlBtn:hover { background: #d4d4d4; }
+.deleteBtn { color: #d93025; }
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
