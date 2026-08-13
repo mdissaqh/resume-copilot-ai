@@ -47,7 +47,8 @@ export const generateResume = async (req, res) => {
         const newResume = await Resume.create({
             userId: req.user._id,
             analysisId: analysis._id,
-            content: structuredResume
+            content: structuredResume,
+            templateId: "classic"
         });
 
         res.status(200).json({ 
@@ -63,14 +64,14 @@ export const generateResume = async (req, res) => {
 
 export const updateResume = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { content } = req.body;
+        const { id } = req.params; 
+        const { content, templateId } = req.body;
 
         if (!content) return res.status(400).json({ success: false, message: "Resume content is required." });
 
         const updatedResume = await Resume.findOneAndUpdate(
             { _id: id, userId: req.user._id },
-            { content },
+            { content, templateId: templateId || "classic" },
             { new: true }
         );
 

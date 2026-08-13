@@ -15,6 +15,10 @@ const resumeSchema = new mongoose.Schema({
         type: String,
         default: "My ATS Resume"
     },
+    templateId: {
+        type: String,
+        default: "classic"
+    },
     content: {
         type: Object,
         required: true

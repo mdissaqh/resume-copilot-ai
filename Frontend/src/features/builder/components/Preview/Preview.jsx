@@ -1,95 +1,48 @@
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import styles from '../../styles/Preview.module.css';
+import TemplateClassic from '../Templates/TemplateClassic';
+import TemplateModern from '../Templates/TemplateModern';
+import TemplateMinimal from '../Templates/TemplateMinimal';
 
-const Preview = ({ resumeData }) => {
+const Preview = ({ resumeData, templateId }) => {
     if (!resumeData) return null;
-    const { personalInfo, professionalSummary, experience, education, skills, additionalSections } = resumeData;
+
+    const renderTemplate = () => {
+        switch (templateId) {
+            case 'modern': return <TemplateModern data={resumeData} />;
+            case 'minimal': return <TemplateMinimal data={resumeData} />;
+            case 'classic':
+            default:
+                return <TemplateClassic data={resumeData} />;
+        }
+    };
 
     return (
-        <div className={styles.previewContainer}>
-            <div className={styles.paper}>
-                
-                <div className={styles.name}>{personalInfo?.fullName}</div>
-                <div className={styles.contactInfo}>
-                    {personalInfo?.email && <span>{personalInfo.email}</span>}
-                    {personalInfo?.phone && <span>| {personalInfo.phone}</span>}
-                    {personalInfo?.location && <span>| {personalInfo.location}</span>}
-                </div>
-
-                {professionalSummary && (
-                    <div className={styles.section}>
-                        <div className={styles.sectionTitle}>Professional Summary</div>
-                        <div className={styles.summary}>{professionalSummary}</div>
-                    </div>
+        <div className={styles.previewWrapper}>
+            <TransformWrapper
+                initialScale={1}
+                minScale={0.3}
+                maxScale={3}
+                centerOnInit={true}
+                wheel={{ step: 0.1 }}
+            >
+                {({ zoomIn, zoomOut, resetTransform }) => (
+                    <>
+                        <div className={styles.toolbar}>
+                            <button className={styles.toolbarBtn} onClick={() => zoomOut()}>- Zoom Out</button>
+                            <button className={styles.toolbarBtn} onClick={() => resetTransform()}>Fit Screen</button>
+                            <button className={styles.toolbarBtn} onClick={() => zoomIn()}>+ Zoom In</button>
+                        </div>
+                        <div className={styles.canvasContainer}>
+                            <TransformComponent wrapperStyle={{ width: "100%", height: "100%" }}>
+                                <div className={styles.paper}>
+                                    {renderTemplate()}
+                                </div>
+                            </TransformComponent>
+                        </div>
+                    </>
                 )}
-
-                {experience && experience.length > 0 && (
-                    <div className={styles.section}>
-                        <div className={styles.sectionTitle}>Experience</div>
-                        {experience.map((exp, i) => (
-                            <div key={i} className={styles.entry}>
-                                <div className={styles.entryHeader}>
-                                    <span>{exp.role}</span>
-                                    <span>{exp.startDate} - {exp.endDate}</span>
-                                </div>
-                                <div className={styles.entrySubheader}>
-                                    <span>{exp.organization}</span>
-                                    <span>{exp.location}</span>
-                                </div>
-                                <ul className={styles.bullets}>
-                                    {exp.achievements?.map((ach, j) => <li key={j}>{ach}</li>)}
-                                </ul>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {education && education.length > 0 && (
-                    <div className={styles.section}>
-                        <div className={styles.sectionTitle}>Education</div>
-                        {education.map((edu, i) => (
-                            <div key={i} className={styles.entry}>
-                                <div className={styles.entryHeader}>
-                                    <span>{edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}</span>
-                                    <span>{edu.startDate} - {edu.endDate}</span>
-                                </div>
-                                <div className={styles.entrySubheader}>
-                                    <span>{edu.institution}</span>
-                                    <span>{edu.location}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {skills && skills.length > 0 && (
-                    <div className={styles.section}>
-                        <div className={styles.sectionTitle}>Skills</div>
-                        {skills.map((skillGroup, i) => (
-                            <div key={i} style={{ marginBottom: '8px', fontSize: '14px', lineHeight: '1.5' }}>
-                                <strong>{skillGroup.category}: </strong>
-                                <span>{skillGroup.items?.join(', ')}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                
-                {additionalSections && additionalSections.length > 0 && additionalSections.map((section, idx) => (
-                     <div key={idx} className={styles.section}>
-                        <div className={styles.sectionTitle}>{section.sectionTitle}</div>
-                        {section.items?.map((item, i) => (
-                            <div key={i} className={styles.entry}>
-                                <div className={styles.entryHeader}>
-                                    <span>{item.heading}</span>
-                                    <span>{item.date}</span>
-                                </div>
-                                <div className={styles.entrySubheader}>{item.subheading}</div>
-                                {item.description && <div className={styles.summary}>{item.description}</div>}
-                            </div>
-                        ))}
-                     </div>
-                ))}
-
-            </div>
+            </TransformWrapper>
         </div>
     );
 };

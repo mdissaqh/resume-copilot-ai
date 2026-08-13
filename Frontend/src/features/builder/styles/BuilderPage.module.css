@@ -14,6 +14,8 @@
     padding: 16px 24px;
     background-color: #ffffff;
     border-bottom: 1px solid #eaeaea;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .backLink {
@@ -28,6 +30,7 @@
     border: 1px solid #dadce0;
     transition: all 0.2s;
     font-size: 0.95rem;
+    white-space: nowrap;
 }
 
 .backLink:hover {
@@ -40,6 +43,7 @@
     display: flex;
     gap: 16px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .saveButton {
@@ -51,6 +55,7 @@
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s;
+    white-space: nowrap;
 }
 
 .saveButton:hover:not(:disabled) { background-color: #0052cc; }
@@ -59,6 +64,7 @@
 .statusText {
     font-size: 0.9rem;
     color: #70757a;
+    white-space: nowrap;
 }
 
 .mobileTabs {
@@ -83,9 +89,10 @@
 
 .previewPane {
     flex: 1;
-    overflow-y: auto;
-    background-color: #f4f7f6;
+    background-color: #e5e7eb;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 .loadingBox, .errorBox {
@@ -93,6 +100,46 @@
     padding: 60px;
     margin: 40px auto;
     max-width: 600px;
+}
+
+.templateSelection {
+    padding: 40px 20px;
+    max-width: 1000px;
+    margin: 0 auto;
+    text-align: center;
+    overflow-y: auto;
+    height: 100%;
+}
+
+.templateGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 24px;
+    margin-top: 32px;
+}
+
+.templateCard {
+    background: white;
+    border: 2px solid #eaeaea;
+    border-radius: 12px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.templateCard:hover {
+    border-color: #0066ff;
+    box-shadow: 0 8px 24px rgba(0, 102, 255, 0.15);
+}
+
+.templateCard h3 {
+    margin-bottom: 8px;
+    color: #1a1a1a;
+}
+
+.templateCard p {
+    color: #70757a;
+    font-size: 0.9rem;
 }
 
 @media (max-width: 1024px) {
@@ -103,6 +150,7 @@
         gap: 12px;
         border-bottom: 1px solid #eaeaea;
         z-index: 10;
+        overflow-x: auto;
     }
 
     .tabBtn {
@@ -115,6 +163,7 @@
         color: #4a4a4a;
         cursor: pointer;
         transition: all 0.2s;
+        white-space: nowrap;
     }
 
     .activeTab {
@@ -125,11 +174,10 @@
 
     .editorPane, .previewPane {
         display: none; 
-        padding: 16px;
     }
 
     .paneActive {
-        display: block;
+        display: flex;
         flex: 1;
         width: 100%;
     }
