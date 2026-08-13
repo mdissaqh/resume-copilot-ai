@@ -1,3 +1,12 @@
+.editorContainer {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.editorContainer * {
+    box-sizing: border-box;
+}
+
 .section {
     margin-bottom: 32px;
 }
@@ -10,12 +19,14 @@
     margin-bottom: 16px;
     display: flex;
     justify-content: space-between;
+    align-items: center;
 }
 
 .formGroup {
     display: flex;
     flex-direction: column;
     margin-bottom: 16px;
+    width: 100%;
 }
 
 .formGroup label {
@@ -26,15 +37,22 @@
 }
 
 .input, .textarea {
+    width: 100%;
     padding: 10px;
     border: 1px solid #dadce0;
     border-radius: 6px;
     font-size: 0.95rem;
     font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.input:focus, .textarea:focus {
+    outline: none;
+    border-color: #0066ff;
 }
 
 .textarea {
-    min-height: 100px;
+    min-height: 120px;
     resize: vertical;
 }
 
@@ -44,6 +62,7 @@
     border-radius: 8px;
     margin-bottom: 16px;
     background-color: #fafafa;
+    width: 100%;
 }
 
 .itemHeader {
@@ -51,22 +70,33 @@
     justify-content: flex-end;
     gap: 8px;
     margin-bottom: 12px;
+    flex-wrap: wrap;
 }
 
 .controlBtn {
     background: #eaeaea;
     border: none;
-    padding: 4px 10px;
+    padding: 6px 12px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 500;
     color: #4a4a4a;
+    transition: background 0.2s;
 }
+
 .controlBtn:hover { background: #d4d4d4; }
-.deleteBtn { color: #d93025; }
+.deleteBtn { color: #d93025; background: #fce8e6; }
+.deleteBtn:hover { background: #facdcd; }
 
 .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
 }

@@ -14,6 +14,7 @@ const BuilderPage = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [isDirty, setIsDirty] = useState(false);
+    const [activeTab, setActiveTab] = useState("editor");
 
     useEffect(() => {
         const fetchAndGenerate = async () => {
@@ -31,7 +32,6 @@ const BuilderPage = () => {
         fetchAndGenerate();
     }, [id]);
 
-    // Deep state updater logic
     const updateResumeData = useCallback((pathArray, value) => {
         setResumeData(prev => {
             const newData = JSON.parse(JSON.stringify(prev));
@@ -77,11 +77,27 @@ const BuilderPage = () => {
                 </div>
             </div>
             
+            {/* Mobile Tabs */}
+            <div className={styles.mobileTabs}>
+                <button 
+                    className={`${styles.tabBtn} ${activeTab === 'editor' ? styles.activeTab : ''}`}
+                    onClick={() => setActiveTab('editor')}
+                >
+                    ✎ Edit Resume
+                </button>
+                <button 
+                    className={`${styles.tabBtn} ${activeTab === 'preview' ? styles.activeTab : ''}`}
+                    onClick={() => setActiveTab('preview')}
+                >
+                    👁 Live Preview
+                </button>
+            </div>
+
             <div className={styles.workspace}>
-                <div className={styles.editorPane}>
+                <div className={`${styles.editorPane} ${activeTab === 'editor' ? styles.paneActive : ''}`}>
                     <Editor resumeData={resumeData} onChange={updateResumeData} />
                 </div>
-                <div className={styles.previewPane}>
+                <div className={`${styles.previewPane} ${activeTab === 'preview' ? styles.paneActive : ''}`}>
                     <Preview resumeData={resumeData} />
                 </div>
             </div>
