@@ -1,26 +1,51 @@
 import { pdf, Document, Page, Text, View, Link, StyleSheet } from '@react-pdf/renderer';
 import { validateAndFormatURL } from '../../../utils/urlValidator';
+import { normalizeResumeData } from '../../../utils/resumeNormalizer';
+import { templateConfig } from '../../../utils/templateConfig';
 
-const classicStyles = StyleSheet.create({
-    page: { padding: 40, fontFamily: 'Times-Roman', fontSize: 11, color: '#000', lineHeight: 1.5 },
-    section: { marginBottom: 15 },
-    name: { fontFamily: 'Times-Bold', fontSize: 24, textAlign: 'center', marginBottom: 4, textTransform: 'uppercase' },
-    contactWrapper: { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16, borderBottom: '1pt solid #000', paddingBottom: 12 },
-    contactItem: { fontSize: 10, marginHorizontal: 4, marginBottom: 4 },
-    linkItem: { fontSize: 10, color: '#000', textDecoration: 'none' },
-    sectionTitle: { fontFamily: 'Times-Bold', fontSize: 12, textTransform: 'uppercase', borderBottom: '1pt solid #000', marginBottom: 10, paddingBottom: 2 },
+// Dynamic StyleSheet Generator mirroring TemplateConfig constraints
+const getStyles = (config) => StyleSheet.create({
+    page: { padding: 40, fontFamily: config.fontFamily, fontSize: 10, color: config.primaryColor, lineHeight: 1.4 },
+    section: { marginBottom: config.id === 'minimal' ? 20 : 15 },
+    name: { 
+        fontFamily: config.fontFamily === 'Helvetica' ? 'Helvetica-Bold' : 'Times-Bold', 
+        fontSize: config.id === 'minimal' ? 22 : 24, 
+        textAlign: config.headerAlign, 
+        marginBottom: 6, 
+        textTransform: config.uppercaseHeaders ? 'uppercase' : 'none',
+        color: config.primaryColor
+    },
+    contactWrapper: { 
+        display: 'flex', flexDirection: 'row', flexWrap: 'wrap', 
+        justifyContent: config.headerAlign === 'center' ? 'center' : 'flex-start', 
+        marginBottom: config.id === 'minimal' ? 24 : 16, 
+        borderBottom: config.showBorders ? `1pt solid ${config.primaryColor}` : 'none', 
+        paddingBottom: config.showBorders ? 12 : 0 
+    },
+    contactItem: { fontSize: 9.5, marginHorizontal: config.headerAlign === 'center' ? 4 : 0, marginRight: config.headerAlign === 'left' ? 12 : 4, marginBottom: 4, color: config.secondaryColor },
+    linkItem: { fontSize: 9.5, color: config.id === 'modern' ? '#2980b9' : config.secondaryColor, textDecoration: 'none' },
+    sectionTitle: { 
+        fontFamily: config.fontFamily === 'Helvetica' ? 'Helvetica-Bold' : 'Times-Bold', 
+        fontSize: config.id === 'minimal' ? 11 : 12, 
+        textTransform: 'uppercase', 
+        borderBottom: config.showBorders ? `1pt solid ${config.id === 'modern' ? '#ecf0f1' : config.primaryColor}` : 'none', 
+        marginBottom: 10, paddingBottom: 2, color: config.primaryColor 
+    },
     rowBetween: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-    bold: { fontFamily: 'Times-Bold' },
-    italic: { fontFamily: 'Times-Italic' },
-    bulletRow: { display: 'flex', flexDirection: 'row', marginBottom: 3, paddingLeft: 10 },
-    bulletPoint: { width: 15, fontSize: 10 },
-    bulletText: { flex: 1, fontSize: 11 }
+    flexRow: { display: 'flex', flexDirection: 'row', marginBottom: 10 },
+    leftCol: { width: 100, color: config.secondaryColor, fontSize: 9.5 },
+    rightCol: { flex: 1 },
+    bold: { fontFamily: config.fontFamily === 'Helvetica' ? 'Helvetica-Bold' : 'Times-Bold', color: config.primaryColor },
+    italic: { fontFamily: config.fontFamily === 'Helvetica' ? 'Helvetica-Oblique' : 'Times-Italic', color: config.primaryColor },
+    bulletRow: { display: 'flex', flexDirection: 'row', marginBottom: 3, paddingLeft: config.id === 'minimal' ? 0 : 10 },
+    bulletPoint: { width: 12, fontSize: 10, color: config.id === 'modern' ? '#2980b9' : config.primaryColor },
+    bulletText: { flex: 1, fontSize: 10, color: config.primaryColor }
 });
 
-const ContactSection = ({ personalInfo, styles, templateId }) => {
+const ContactSection = ({ personalInfo, styles, config }) => {
     if (!personalInfo) return null;
     const items = [personalInfo.email, personalInfo.phone, personalInfo.location].filter(Boolean);
-    const separator = templateId === 'modern' ? '•' : templateId === 'minimal' ? '/' : '|';
+    const separator = config.id === 'modern' ? '•' : config.id === 'minimal' ? '/' : '|';
     
     return (
         <View style={styles.contactWrapper}>
@@ -42,103 +67,133 @@ const ContactSection = ({ personalInfo, styles, templateId }) => {
     );
 };
 
-const PDFClassic = ({ data }) => (
-    <Page size="A4" style={classicStyles.page}>
-        <Text style={classicStyles.name}>{data.personalInfo?.fullName}</Text>
-        <ContactSection personalInfo={data.personalInfo} styles={classicStyles} templateId="classic" />
+const UniversalPDF = ({ data, config }) => {
+    const styles = getStyles(config);
+    const isMinimal = config.id === 'minimal';
 
-        {data.professionalSummary && (
-            <View style={classicStyles.section} wrap={false}>
-                <Text style={classicStyles.sectionTitle}>Professional Summary</Text>
-                <Text>{data.professionalSummary}</Text>
-            </View>
-        )}
+    return (
+        <Page size="A4" style={styles.page}>
+            <Text style={styles.name}>{data.personalInfo.fullName}</Text>
+            <ContactSection personalInfo={data.personalInfo} styles={styles} config={config} />
 
-        {data.experience?.length > 0 && (
-            <View style={classicStyles.section}>
-                <Text style={classicStyles.sectionTitle}>Experience</Text>
-                {data.experience.map((exp, i) => (
-                    <View key={i} style={{ marginBottom: 10 }} wrap={false}>
-                        <View style={classicStyles.rowBetween}>
-                            <Text style={classicStyles.bold}>{exp.role}</Text>
-                            <Text style={classicStyles.bold}>{exp.startDate} - {exp.endDate}</Text>
-                        </View>
-                        <View style={classicStyles.rowBetween}>
-                            <Text style={classicStyles.italic}>{exp.organization}</Text>
-                            <Text style={classicStyles.italic}>{exp.location}</Text>
-                        </View>
-                        {exp.achievements?.map((ach, j) => (
-                            <View key={j} style={classicStyles.bulletRow}>
-                                <Text style={classicStyles.bulletPoint}>•</Text>
-                                <Text style={classicStyles.bulletText}>{ach}</Text>
+            {data.professionalSummary && (
+                <View style={styles.section} wrap={false}>
+                    <Text style={styles.sectionTitle}>{isMinimal ? "ABOUT" : "Professional Summary"}</Text>
+                    <Text>{data.professionalSummary}</Text>
+                </View>
+            )}
+
+            {data.experience.length > 0 && (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Experience</Text>
+                    {data.experience.map((exp, i) => (
+                        <View key={i} style={isMinimal ? styles.flexRow : { marginBottom: 10 }} wrap={false}>
+                            {isMinimal && (
+                                <View style={styles.leftCol}>
+                                    <Text>{exp.startDate}</Text><Text>{exp.endDate}</Text>
+                                </View>
+                            )}
+                            <View style={isMinimal ? styles.rightCol : {}}>
+                                <View style={isMinimal ? {} : styles.rowBetween}>
+                                    <Text style={styles.bold}>{exp.role}</Text>
+                                    {!isMinimal && <Text style={styles.bold}>{exp.startDate} - {exp.endDate}</Text>}
+                                </View>
+                                <View style={isMinimal ? { marginBottom: 4 } : styles.rowBetween}>
+                                    <Text style={styles.italic}>{exp.organization}</Text>
+                                    {!isMinimal && <Text style={styles.italic}>{exp.location}</Text>}
+                                </View>
+                                {exp.achievements?.map((ach, j) => (
+                                    <View key={j} style={styles.bulletRow}>
+                                        <Text style={styles.bulletPoint}>{isMinimal ? '-' : '•'}</Text>
+                                        <Text style={styles.bulletText}>{ach}</Text>
+                                    </View>
+                                ))}
                             </View>
-                        ))}
-                    </View>
-                ))}
-            </View>
-        )}
-
-        {data.projects?.length > 0 && (
-            <View style={classicStyles.section}>
-                <Text style={classicStyles.sectionTitle}>Projects</Text>
-                {data.projects.map((proj, i) => (
-                    <View key={i} style={{ marginBottom: 10 }} wrap={false}>
-                        <View style={classicStyles.rowBetween}>
-                            <Text style={classicStyles.bold}>{proj.title}</Text>
-                            <Text style={classicStyles.bold}>{proj.date}</Text>
                         </View>
-                        {proj.description && <Text style={{ marginBottom: 4 }}>{proj.description}</Text>}
-                        {proj.highlights?.map((ach, j) => (
-                            <View key={j} style={classicStyles.bulletRow}>
-                                <Text style={classicStyles.bulletPoint}>•</Text>
-                                <Text style={classicStyles.bulletText}>{ach}</Text>
+                    ))}
+                </View>
+            )}
+
+            {data.projects.length > 0 && (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Projects</Text>
+                    {data.projects.map((proj, i) => (
+                        <View key={i} style={isMinimal ? styles.flexRow : { marginBottom: 10 }} wrap={false}>
+                            {isMinimal && (
+                                <View style={styles.leftCol}><Text>{proj.date}</Text></View>
+                            )}
+                            <View style={isMinimal ? styles.rightCol : {}}>
+                                <View style={isMinimal ? {} : styles.rowBetween}>
+                                    <Text style={styles.bold}>{proj.title}</Text>
+                                    {!isMinimal && <Text style={styles.bold}>{proj.date}</Text>}
+                                </View>
+                                <View style={isMinimal ? { marginBottom: 4 } : styles.rowBetween}>
+                                    <Text style={styles.italic}>{proj.description}</Text>
+                                    <View style={{ display: 'flex', flexDirection: 'row' }}>
+                                        {validateAndFormatURL(proj.githubUrl) && <Link src={validateAndFormatURL(proj.githubUrl)} style={styles.linkItem}>GitHub</Link>}
+                                        {validateAndFormatURL(proj.githubUrl) && validateAndFormatURL(proj.liveUrl) && <Text style={styles.contactItem}> | </Text>}
+                                        {validateAndFormatURL(proj.liveUrl) && <Link src={validateAndFormatURL(proj.liveUrl)} style={styles.linkItem}>Live Demo</Link>}
+                                    </View>
+                                </View>
+                                {proj.highlights?.map((ach, j) => (
+                                    <View key={j} style={styles.bulletRow}>
+                                        <Text style={styles.bulletPoint}>{isMinimal ? '-' : '•'}</Text>
+                                        <Text style={styles.bulletText}>{ach}</Text>
+                                    </View>
+                                ))}
                             </View>
-                        ))}
-                    </View>
-                ))}
-            </View>
-        )}
-
-        {data.education?.length > 0 && (
-            <View style={classicStyles.section}>
-                <Text style={classicStyles.sectionTitle}>Education</Text>
-                {data.education.map((edu, i) => (
-                    <View key={i} style={{ marginBottom: 8 }} wrap={false}>
-                        <View style={classicStyles.rowBetween}>
-                            <Text style={classicStyles.bold}>{edu.institution}</Text>
-                            <Text style={classicStyles.bold}>{edu.location}</Text>
                         </View>
-                        <View style={classicStyles.rowBetween}>
-                            <Text style={classicStyles.italic}>{edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}</Text>
-                            <Text style={classicStyles.italic}>{edu.startDate} - {edu.endDate}</Text>
+                    ))}
+                </View>
+            )}
+
+            {data.education.length > 0 && (
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Education</Text>
+                    {data.education.map((edu, i) => (
+                        <View key={i} style={isMinimal ? styles.flexRow : { marginBottom: 8 }} wrap={false}>
+                             {isMinimal && (
+                                <View style={styles.leftCol}><Text>{edu.startDate}</Text><Text>{edu.endDate}</Text></View>
+                            )}
+                            <View style={isMinimal ? styles.rightCol : {}}>
+                                <View style={isMinimal ? {} : styles.rowBetween}>
+                                    <Text style={styles.bold}>{edu.institution}</Text>
+                                    {!isMinimal && <Text style={styles.bold}>{edu.location}</Text>}
+                                </View>
+                                <View style={isMinimal ? {} : styles.rowBetween}>
+                                    <Text>{edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}</Text>
+                                    {!isMinimal && <Text>{edu.startDate} - {edu.endDate}</Text>}
+                                </View>
+                            </View>
                         </View>
-                    </View>
-                ))}
-            </View>
-        )}
+                    ))}
+                </View>
+            )}
 
-        {data.skills?.length > 0 && (
-            <View style={classicStyles.section} wrap={false}>
-                <Text style={classicStyles.sectionTitle}>Skills</Text>
-                {data.skills.map((skillGroup, i) => (
-                    <Text key={i} style={{ marginBottom: 4 }}>
-                        <Text style={classicStyles.bold}>{skillGroup.category}: </Text>
-                        {skillGroup.items?.join(', ')}
-                    </Text>
-                ))}
-            </View>
-        )}
-    </Page>
-);
+            {data.skills.length > 0 && (
+                <View style={styles.section} wrap={false}>
+                    <Text style={styles.sectionTitle}>{isMinimal ? "EXPERTISE" : "Skills"}</Text>
+                    {data.skills.map((skillGroup, i) => (
+                        <Text key={i} style={{ marginBottom: 4 }}>
+                            <Text style={styles.bold}>{skillGroup.category}: </Text>
+                            {skillGroup.items?.join(', ')}
+                        </Text>
+                    ))}
+                </View>
+            )}
+        </Page>
+    );
+};
 
-export const downloadPDF = async (resumeData, templateId) => {
+export const downloadPDF = async (rawResumeData, templateId) => {
     try {
-        let SelectedTemplate = <PDFClassic data={resumeData} />;
-        const blob = await pdf(<Document>{SelectedTemplate}</Document>).toBlob();
+        const normalizedData = normalizeResumeData(rawResumeData);
+        const config = templateConfig[templateId] || templateConfig.classic;
+        const blob = await pdf(<Document><UniversalPDF data={normalizedData} config={config} /></Document>).toBlob();
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${resumeData.personalInfo?.fullName || 'Resume'}.pdf`;
+        link.download = `${normalizedData.personalInfo.fullName || 'Resume'}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

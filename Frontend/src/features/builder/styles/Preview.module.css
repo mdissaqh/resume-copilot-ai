@@ -9,6 +9,7 @@
 .toolbar {
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 12px;
     padding: 12px;
     background-color: #ffffff;
@@ -18,14 +19,17 @@
 }
 
 .toolbarBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     background-color: #f3f4f6;
     border: 1px solid #d1d5db;
-    padding: 6px 12px;
-    border-radius: 4px;
+    padding: 8px 14px;
+    border-radius: 6px;
     font-weight: 600;
     color: #374151;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     transition: all 0.2s;
 }
 
@@ -38,12 +42,14 @@
     overflow: hidden;
     position: relative;
     cursor: grab;
+    width: 100%;
 }
 
 .canvasContainer:active {
     cursor: grabbing;
 }
 
+/* Strict A4 Document Constraint */
 .paper {
     width: 210mm;
     min-height: 297mm;
@@ -52,5 +58,4 @@
     padding: 20mm;
     box-sizing: border-box;
     margin: 40px auto; 
-    /* The paper remains strictly fixed, the TransformWrapper handles responsive scaling */
 }

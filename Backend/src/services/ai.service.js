@@ -16,12 +16,11 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
         }
         
         prompt += `
-        Resume Text:
-        "${resumeText}"
+        Resume Text: "${resumeText}"
 
         You MUST return a JSON object with this EXACT structure:
         {
-            "analysisTitle": "A concise, meaningful identifier for this record (e.g., 'Senior Frontend Developer Analysis' or 'Student Resume Analysis'). Max 6 words.",
+            "analysisTitle": "A concise identifier (e.g., 'Senior Frontend Developer Analysis'). Max 6 words.",
             "atsScore": {
                 "total": Number (0-100),
                 "parseability": Number (0-100),
@@ -33,12 +32,11 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
             "summary": "A brief 2-3 sentence overview.",
             "strengths": ["Array of strong points"],
             "weaknesses": ["Array of areas needing improvement"],
-            "recommendedKeywords": ["Array of up to 5 keywords"],
             "jdGaps": [
-                { "skill": "String", "reason": "String explaining why this JD requirement is missing from the resume." }
+                { "skill": "String", "importance": "high|medium|low", "reason": "String", "recommendation": "String" }
             ],
-            "missingInformation": [
-                { "field": "String (e.g., 'linkedin', 'portfolio', 'projectMetrics')", "label": "String", "reason": "String", "priority": "high|medium|low" }
+            "editorRecommendations": [
+                { "section": "personalInfo|projects|experience", "field": "String (e.g., 'linkedin', 'githubUrl', 'portfolio')", "type": "url|text", "label": "String", "reason": "String", "userInputRequired": true }
             ]
         }`;
 
@@ -46,7 +44,7 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
         return JSON.parse(result.response.text());
     } catch (error) {
         console.error("Gemini API Error:", error);
-        throw new Error("Failed to generate AI analysis from Gemini.");
+        throw new Error("Failed to generate AI analysis.");
     }
 };
 
@@ -59,29 +57,28 @@ export const generateStructuredResume = async (resumeText, jobDescription) => {
 
         let prompt = `You are an elite Executive Resume Writer. Rewrite and format the resume into an ATS-optimized JSON structure.
         CRITICAL RULES:
-        1. DO NOT HALLUCINATE OR FABRICATE. Do NOT invent URLs, metrics, job titles, or skills.
-        2. NEVER REMOVE USEFUL INFORMATION. If the candidate lists Projects, keep them as Projects. Do NOT invent employment history (like "Developer") for a personal project.
-        3. QUANTIFICATION: Emphasize existing metrics. Do not invent new ones. `;
+        1. DO NOT HALLUCINATE OR FABRICATE. Do NOT invent URLs, metrics, job titles, employers, or skills.
+        2. ORIGINAL CONTENT IS BASELINE: Preserve all valid information. You are an optimizer, not a destructive summarizer.
+        3. PROJECTS STAY PROJECTS: If the candidate lists academic/personal Projects, put them in the 'projects' array. DO NOT convert projects into 'experience' and NEVER invent the title 'Developer' for them.
+        4. QUANTIFICATION: Extract and emphasize existing metrics. Do not invent new ones.`;
 
         if (jobDescription) {
-            prompt += `\n4. TAILORING: Tailor to this JD: "${jobDescription}". Prioritize relevant skills, but do NOT add skills the candidate does not have. `;
+            prompt += `\n5. TAILORING: Tailor to this JD: "${jobDescription}". Prioritize relevant existing skills and keywords. Do NOT add skills the candidate does not have.`;
         }
 
         prompt += `
         Original Resume Text: "${resumeText}"
 
-        Return JSON matching this structure exactly:
+        Return JSON matching this exact structure:
         {
-          "personalInfo": { 
-             "fullName": "String", "email": "String", "phone": "String", "location": "String",
-             "links": [{ "platform": "String (e.g., LinkedIn, GitHub, Portfolio)", "url": "String" }]
-          },
+          "personalInfo": { "fullName": "String", "email": "String", "phone": "String", "location": "String", "links": [{ "platform": "String (e.g., LinkedIn, GitHub, Portfolio)", "url": "String" }] },
           "professionalSummary": "String",
-          "experience": [ { "organization": "String", "role": "String", "location": "String", "startDate": "String", "endDate": "String", "description": "String", "achievements": ["String (Include quantified metrics if present in original text)"] } ],
-          "projects": [ { "title": "String", "role": "String (Optional)", "date": "String (Optional)", "url": "String (Optional)", "description": "String", "highlights": ["String"] } ],
+          "experience": [ { "organization": "String", "role": "String", "location": "String", "startDate": "String", "endDate": "String", "description": "String", "achievements": ["String (Include quantified metrics)"] } ],
+          "projects": [ { "title": "String", "technologies": ["String"], "date": "String", "liveUrl": "String", "githubUrl": "String", "description": "String", "highlights": ["String"] } ],
           "education": [ { "institution": "String", "degree": "String", "fieldOfStudy": "String", "location": "String", "startDate": "String", "endDate": "String" } ],
           "skills": [ { "category": "String", "items": ["String"] } ],
           "certifications": [ { "name": "String", "issuer": "String", "date": "String" } ],
+          "achievements": [ "String" ],
           "additionalSections": [ { "sectionTitle": "String", "items": [ { "heading": "String", "subheading": "String", "date": "String", "description": "String" } ] } ]
         }`;
 

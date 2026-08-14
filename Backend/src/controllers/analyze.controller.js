@@ -16,11 +16,11 @@ export const analyzeResume = async (req, res) => {
         else return res.status(400).json({ message: "Unsupported file format." });
 
         if (!parsedText || parsedText.trim().length === 0) {
-            return res.status(400).json({ message: "Could not extract text from document. Please ensure it is a readable resume." });
+            return res.status(400).json({ message: "Could not extract text. Please ensure it is a readable text-based resume." });
         }
 
         if (parsedText.length > MAX_TEXT_LENGTH) {
-            return res.status(400).json({ message: "Document is unusually large (exceeds 15,000 characters). Please upload a standard resume to ensure optimal AI performance." });
+            return res.status(400).json({ message: `Document is unusually large (${parsedText.length} chars). Please upload a standard resume under 15,000 characters to ensure optimal AI processing.` });
         }
 
         const aiAnalysisResult = await generateResumeAnalysis(parsedText, jobDescription);
@@ -35,11 +35,7 @@ export const analyzeResume = async (req, res) => {
             });
         }
 
-        res.status(200).json({
-            message: "Resume analyzed successfully!",
-            analysis: aiAnalysisResult,
-            parsedText: parsedText
-        });
+        res.status(200).json({ message: "Resume analyzed successfully!", analysis: aiAnalysisResult, parsedText: parsedText });
     } catch (error) {
         console.error("Error analyzing resume:", error);
         res.status(500).json({ message: "An error occurred during analysis." });

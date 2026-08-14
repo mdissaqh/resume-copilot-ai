@@ -16,28 +16,218 @@
     break-inside: avoid;
 }
 
-.bullets {
-    margin: 0;
-    padding-left: 20px;
-}
-
 .flexBetween {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
 }
 
-.classicFont { font-family: "Times New Roman", Times, serif; }
-.classicName { font-size: 24pt; text-align: center; font-weight: bold; margin-bottom: 4px; text-transform: uppercase; }
-.classicContact { text-align: center; margin-bottom: 16px; border-bottom: 1px solid #000; padding-bottom: 12px; font-size: 10pt; }
-.classicSectionTitle { font-size: 12pt; font-weight: bold; text-transform: uppercase; border-bottom: 1px solid #000; margin-bottom: 10px; }
+.bold {
+    font-weight: bold;
+}
 
-.modernFont { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
-.modernName { font-size: 26pt; font-weight: 700; color: #2c3e50; margin-bottom: 4px; }
-.modernContact { color: #7f8c8d; margin-bottom: 24px; font-size: 10pt; }
-.modernSectionTitle { font-size: 14pt; font-weight: 600; color: #2980b9; border-bottom: 2px solid #ecf0f1; padding-bottom: 4px; margin-bottom: 12px; text-transform: uppercase;}
+.italic {
+    font-style: italic;
+}
 
-.minimalFont { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-.minimalName { font-size: 22pt; font-weight: 300; letter-spacing: 1px; margin-bottom: 8px; }
-.minimalContact { font-size: 9.5pt; color: #666; margin-bottom: 32px; }
-.minimalSectionTitle { font-size: 11pt; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 16px; color: #333; }
+.bullets {
+    margin: 4px 0 0 0;
+    padding-left: 18px;
+}
+
+.bullets li {
+    margin-bottom: 3px;
+}
+
+.contactWrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #000;
+    padding-bottom: 12px;
+}
+
+.contactItem {
+    font-size: 10pt;
+}
+
+.linkItem {
+    font-size: 10pt;
+    color: #000;
+    text-decoration: underline;
+}
+
+.projectLinks {
+    display: flex;
+    gap: 12px;
+}
+
+/* Classic */
+.fontClassic {
+    font-family: "Times New Roman", Times, serif;
+}
+
+.name {
+    font-size: 24pt;
+    font-weight: bold;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.sectionTitleClassic {
+    font-size: 12pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 1px solid #000;
+    margin-bottom: 10px;
+    padding-bottom: 2px;
+}
+
+.skillRow {
+    margin-bottom: 4px;
+}
+
+/* Modern */
+.fontModern {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #34495e;
+}
+
+.nameModern {
+    font-size: 26pt;
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 6px;
+}
+
+.contactWrapperModern {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-bottom: 20px;
+}
+
+.contactItemModern {
+    font-size: 10pt;
+    color: #7f8c8d;
+}
+
+.linkItemModern {
+    font-size: 10pt;
+    color: #2980b9;
+    text-decoration: underline;
+}
+
+.sectionTitleModern {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #2980b9;
+    text-transform: uppercase;
+    border-bottom: 2px solid #ecf0f1;
+    margin-bottom: 10px;
+    padding-bottom: 4px;
+}
+
+.boldModern {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.dateTextModern {
+    color: #7f8c8d;
+}
+
+.orgTextModern {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.bulletsModern {
+    margin: 4px 0 0 0;
+    padding-left: 18px;
+    list-style-type: square;
+    color: #34495e;
+}
+
+/* Minimal */
+.fontMinimal {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #444;
+}
+
+.nameMinimal {
+    font-size: 22pt;
+    font-weight: normal;
+    color: #111;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+}
+
+.contactWrapperMinimal {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-bottom: 24px;
+}
+
+.contactItemMinimal {
+    font-size: 9.5pt;
+    color: #666;
+}
+
+.linkItemMinimal {
+    font-size: 9.5pt;
+    color: #666;
+    text-decoration: underline;
+}
+
+.sectionTitleMinimal {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 16px;
+}
+
+.flexRowMinimal {
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 16px;
+    page-break-inside: avoid;
+}
+
+.leftColMinimal {
+    width: 120px;
+    flex-shrink: 0;
+    color: #666;
+    font-size: 9.5pt;
+}
+
+.rightColMinimal {
+    flex: 1;
+}
+
+.boldMinimal {
+    font-weight: bold;
+    color: #111;
+}
+
+.orgTextMinimal {
+    color: #555;
+    margin-bottom: 4px;
+}
+
+.bulletsMinimal {
+    margin: 0;
+    padding-left: 14px;
+    color: #444;
+}
+
+.skillRowMinimal {
+    margin-bottom: 6px;
+}

@@ -8,6 +8,8 @@ import FeedbackPanel from "../components/FeedbackPanel/FeedbackPanel";
 import styles from "../styles/BuilderPage.module.css";
 import { downloadPDF } from "../utils/pdfExport";
 import { downloadDOCX } from "../utils/docxExport";
+import { normalizeResumeData } from "../../../utils/resumeNormalizer";
+import { Download, Save, LayoutTemplate, ArrowLeft } from 'lucide-react';
 
 const BuilderPage = () => {
     const { id } = useParams();
@@ -31,14 +33,12 @@ const BuilderPage = () => {
     useEffect(() => {
         const fetchAndGenerate = async () => {
             try {
-                // Fetch analysis metadata for feedback panel
                 const analysisReq = await getAnalysisByIdApi(id);
                 setAnalysisData(analysisReq.analysis.analysisResults);
 
-                // Fetch/Generate resume JSON
                 const data = await generateResumeApi(id);
                 setDbResumeId(data.resume._id);
-                setResumeData(data.resume.content);
+                setResumeData(normalizeResumeData(data.resume.content));
                 if (data.resume.templateId) setTemplateId(data.resume.templateId);
             } catch (err) {
                 setError("Failed to load or generate the resume.");
@@ -89,25 +89,17 @@ const BuilderPage = () => {
     const handleDownloadPDF = async () => {
         setExporting(true);
         setIsDownloadOpen(false);
-        try {
-            await downloadPDF(resumeData, templateId);
-        } catch (e) {
-            alert("Failed to generate PDF. Please try again.");
-        } finally {
-            setExporting(false);
-        }
+        try { await downloadPDF(resumeData, templateId); } 
+        catch (e) { alert("Failed to generate PDF."); } 
+        finally { setExporting(false); }
     };
 
     const handleDownloadDOCX = async () => {
         setExporting(true);
         setIsDownloadOpen(false);
-        try {
-            await downloadDOCX(resumeData, templateId);
-        } catch (e) {
-            alert("Failed to generate DOCX. Please try again.");
-        } finally {
-            setExporting(false);
-        }
+        try { await downloadDOCX(resumeData, templateId); } 
+        catch (e) { alert("Failed to generate DOCX."); } 
+        finally { setExporting(false); }
     };
 
     if (error) return <div className={styles.errorBox}>{error}</div>;
@@ -117,7 +109,7 @@ const BuilderPage = () => {
         return (
             <div className={styles.container}>
                 <div className={styles.header}>
-                    <Link to="/dashboard" className={styles.backLink}>&larr; Dashboard</Link>
+                    <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16}/> Dashboard</Link>
                 </div>
                 <div className={styles.templateSelection}>
                     <h2>Choose Your Resume Layout</h2>
@@ -137,14 +129,16 @@ const BuilderPage = () => {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <Link to="/dashboard" className={styles.backLink}>&larr; Dashboard</Link>
+                <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16}/> Dashboard</Link>
                 <div className={styles.headerActions}>
-                    <button className={styles.backLink} onClick={() => setStep("select-template")}>Layout</button>
+                    <button className={styles.secondaryBtn} onClick={() => setStep("select-template")}>
+                        <LayoutTemplate size={16}/> Layout
+                    </button>
                     <span className={styles.statusText}>{isDirty ? "Unsaved" : "Saved"}</span>
                     
                     <div className={styles.downloadDropdown} ref={dropdownRef}>
-                        <button className={styles.downloadToggle} onClick={() => setIsDownloadOpen(!isDownloadOpen)} disabled={exporting}>
-                            {exporting ? "Generating..." : "Download ▼"}
+                        <button className={styles.primaryBtn} onClick={() => setIsDownloadOpen(!isDownloadOpen)} disabled={exporting}>
+                            <Download size={16}/> {exporting ? "Generating..." : "Download"}
                         </button>
                         {isDownloadOpen && (
                             <div className={styles.dropdownMenu}>
@@ -154,8 +148,8 @@ const BuilderPage = () => {
                         )}
                     </div>
                     
-                    <button className={styles.saveButton} onClick={handleSave} disabled={!isDirty || saving}>
-                        {saving ? "Saving..." : "Save"}
+                    <button className={styles.primaryBtn} onClick={handleSave} disabled={!isDirty || saving}>
+                        <Save size={16}/> {saving ? "Saving..." : "Save"}
                     </button>
                 </div>
             </div>

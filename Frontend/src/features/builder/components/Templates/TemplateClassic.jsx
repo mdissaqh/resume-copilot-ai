@@ -1,34 +1,55 @@
+import { validateAndFormatURL } from '../../../../utils/urlValidator';
+import { templateConfig } from '../../../../utils/templateConfig';
 import styles from '../../styles/Templates.module.css';
 
 const TemplateClassic = ({ data }) => {
-    const { personalInfo, professionalSummary, experience, education, skills, additionalSections } = data;
+    const config = templateConfig.classic;
+    
+    const renderContactLinks = () => {
+        const items = [data.personalInfo?.email, data.personalInfo?.phone, data.personalInfo?.location].filter(Boolean);
+        const links = data.personalInfo?.links || [];
+        
+        return (
+            <div className={styles.contactWrapper} style={{ justifyContent: config.headerAlign }}>
+                {items.map((item, i) => (
+                    <span key={i} className={styles.contactItem}>{item}</span>
+                ))}
+                {links.map((link, i) => {
+                    const validUrl = validateAndFormatURL(link.url);
+                    return validUrl ? (
+                        <a key={`link-${i}`} href={validUrl} target="_blank" rel="noreferrer" className={styles.linkItem}>
+                            {link.platform}
+                        </a>
+                    ) : null;
+                })}
+            </div>
+        );
+    };
 
     return (
-        <div className={`${styles.document} ${styles.classicFont}`}>
-            <div className={styles.classicName}>{personalInfo?.fullName}</div>
-            <div className={styles.classicContact}>
-                {[personalInfo?.email, personalInfo?.phone, personalInfo?.location].filter(Boolean).join(' | ')}
-            </div>
+        <div className={`${styles.document} ${styles.fontClassic}`}>
+            <div className={styles.name} style={{ textAlign: config.headerAlign }}>{data.personalInfo?.fullName}</div>
+            {renderContactLinks()}
 
-            {professionalSummary && (
+            {data.professionalSummary && (
                 <div className={styles.section}>
-                    <div className={styles.classicSectionTitle}>Professional Summary</div>
-                    <div>{professionalSummary}</div>
+                    <div className={styles.sectionTitleClassic}>Professional Summary</div>
+                    <div className={styles.summaryText}>{data.professionalSummary}</div>
                 </div>
             )}
 
-            {experience?.length > 0 && (
+            {data.experience?.length > 0 && (
                 <div className={styles.section}>
-                    <div className={styles.classicSectionTitle}>Experience</div>
-                    {experience.map((exp, i) => (
+                    <div className={styles.sectionTitleClassic}>Experience</div>
+                    {data.experience.map((exp, i) => (
                         <div key={i} className={styles.entry}>
-                            <div className={styles.flexBetween} style={{ fontWeight: 'bold' }}>
-                                <span>{exp.role}</span>
-                                <span>{exp.startDate} - {exp.endDate}</span>
+                            <div className={styles.flexBetween}>
+                                <span className={styles.bold}>{exp.role}</span>
+                                <span className={styles.bold}>{exp.startDate} - {exp.endDate}</span>
                             </div>
-                            <div className={styles.flexBetween} style={{ fontStyle: 'italic', marginBottom: '4px' }}>
-                                <span>{exp.organization}</span>
-                                <span>{exp.location}</span>
+                            <div className={styles.flexBetween}>
+                                <span className={styles.italic}>{exp.organization}</span>
+                                <span className={styles.italic}>{exp.location}</span>
                             </div>
                             <ul className={styles.bullets}>
                                 {exp.achievements?.map((ach, j) => <li key={j}>{ach}</li>)}
@@ -38,16 +59,40 @@ const TemplateClassic = ({ data }) => {
                 </div>
             )}
 
-            {education?.length > 0 && (
+            {data.projects?.length > 0 && (
                 <div className={styles.section}>
-                    <div className={styles.classicSectionTitle}>Education</div>
-                    {education.map((edu, i) => (
+                    <div className={styles.sectionTitleClassic}>Projects</div>
+                    {data.projects.map((proj, i) => (
                         <div key={i} className={styles.entry}>
-                            <div className={styles.flexBetween} style={{ fontWeight: 'bold' }}>
-                                <span>{edu.institution}</span>
-                                <span>{edu.location}</span>
+                            <div className={styles.flexBetween}>
+                                <span className={styles.bold}>{proj.title}</span>
+                                <span className={styles.bold}>{proj.date}</span>
                             </div>
-                            <div className={styles.flexBetween} style={{ fontStyle: 'italic' }}>
+                            <div className={styles.flexBetween}>
+                                <span className={styles.italic}>{proj.description}</span>
+                                <div className={styles.projectLinks}>
+                                    {validateAndFormatURL(proj.githubUrl) && <a href={validateAndFormatURL(proj.githubUrl)} target="_blank" rel="noreferrer" className={styles.linkItem}>GitHub</a>}
+                                    {validateAndFormatURL(proj.liveUrl) && <a href={validateAndFormatURL(proj.liveUrl)} target="_blank" rel="noreferrer" className={styles.linkItem}>Live Demo</a>}
+                                </div>
+                            </div>
+                            <ul className={styles.bullets}>
+                                {proj.highlights?.map((ach, j) => <li key={j}>{ach}</li>)}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {data.education?.length > 0 && (
+                <div className={styles.section}>
+                    <div className={styles.sectionTitleClassic}>Education</div>
+                    {data.education.map((edu, i) => (
+                        <div key={i} className={styles.entry}>
+                            <div className={styles.flexBetween}>
+                                <span className={styles.bold}>{edu.institution}</span>
+                                <span className={styles.bold}>{edu.location}</span>
+                            </div>
+                            <div className={styles.flexBetween}>
                                 <span>{edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}</span>
                                 <span>{edu.startDate} - {edu.endDate}</span>
                             </div>
@@ -56,33 +101,19 @@ const TemplateClassic = ({ data }) => {
                 </div>
             )}
 
-            {skills?.length > 0 && (
+            {data.skills?.length > 0 && (
                 <div className={styles.section}>
-                    <div className={styles.classicSectionTitle}>Skills</div>
-                    {skills.map((skillGroup, i) => (
-                        <div key={i} style={{ marginBottom: '4px' }}>
-                            <strong>{skillGroup.category}: </strong>
-                            <span>{skillGroup.items?.join(', ')}</span>
-                        </div>
-                    ))}
+                    <div className={styles.sectionTitleClassic}>Skills</div>
+                    <div className={styles.skillsContainer}>
+                        {data.skills.map((skillGroup, i) => (
+                            <div key={i} className={styles.skillRow}>
+                                <span className={styles.bold}>{skillGroup.category}: </span>
+                                <span>{skillGroup.items?.join(', ')}</span>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
-
-            {additionalSections?.length > 0 && additionalSections.map((section, idx) => (
-                 <div key={idx} className={styles.section}>
-                    <div className={styles.classicSectionTitle}>{section.sectionTitle}</div>
-                    {section.items?.map((item, i) => (
-                        <div key={i} className={styles.entry}>
-                            <div className={styles.flexBetween} style={{ fontWeight: 'bold' }}>
-                                <span>{item.heading}</span>
-                                <span>{item.date}</span>
-                            </div>
-                            <div style={{ fontStyle: 'italic' }}>{item.subheading}</div>
-                            {item.description && <div>{item.description}</div>}
-                        </div>
-                    ))}
-                 </div>
-            ))}
         </div>
     );
 };

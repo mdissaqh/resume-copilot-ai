@@ -1,6 +1,7 @@
 export const validateAndFormatURL = (url) => {
     if (!url || typeof url !== 'string') return '';
     let formattedUrl = url.trim();
+    if (formattedUrl === '') return '';
     if (!formattedUrl.match(/^https?:\/\//i)) {
         formattedUrl = 'https://' + formattedUrl;
     }
