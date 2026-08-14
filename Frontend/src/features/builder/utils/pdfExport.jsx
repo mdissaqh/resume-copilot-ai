@@ -1,11 +1,14 @@
-import { pdf, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { pdf, Document, Page, Text, View, Link, StyleSheet } from '@react-pdf/renderer';
+import { validateAndFormatURL } from '../../../utils/urlValidator';
 
 
 const classicStyles = StyleSheet.create({
     page: { padding: 40, fontFamily: 'Times-Roman', fontSize: 11, color: '#000', lineHeight: 1.5 },
     section: { marginBottom: 15 },
     name: { fontFamily: 'Times-Bold', fontSize: 24, textAlign: 'center', marginBottom: 4, textTransform: 'uppercase' },
-    contact: { fontSize: 10, textAlign: 'center', marginBottom: 16, borderBottom: '1pt solid #000', paddingBottom: 12 },
+    contactWrapper: { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16, borderBottom: '1pt solid #000', paddingBottom: 12 },
+    contactItem: { fontSize: 10, marginHorizontal: 4 },
+    linkItem: { fontSize: 10, marginHorizontal: 4, color: '#000', textDecoration: 'none' },
     sectionTitle: { fontFamily: 'Times-Bold', fontSize: 12, textTransform: 'uppercase', borderBottom: '1pt solid #000', marginBottom: 10, paddingBottom: 2 },
     rowBetween: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
     bold: { fontFamily: 'Times-Bold' },
@@ -19,7 +22,9 @@ const modernStyles = StyleSheet.create({
     page: { padding: 40, fontFamily: 'Helvetica', fontSize: 10, color: '#34495e', lineHeight: 1.4 },
     section: { marginBottom: 15 },
     name: { fontFamily: 'Helvetica-Bold', fontSize: 26, color: '#2c3e50', marginBottom: 4 },
-    contact: { fontSize: 10, color: '#7f8c8d', marginBottom: 20 },
+    contactWrapper: { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginBottom: 20 },
+    contactItem: { fontSize: 10, color: '#7f8c8d', marginRight: 8, marginBottom: 4 },
+    linkItem: { fontSize: 10, color: '#2980b9', marginRight: 8, marginBottom: 4, textDecoration: 'none' },
     sectionTitle: { fontFamily: 'Helvetica-Bold', fontSize: 14, color: '#2980b9', textTransform: 'uppercase', borderBottom: '2pt solid #ecf0f1', marginBottom: 10, paddingBottom: 4 },
     rowBetween: { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
     bold: { fontFamily: 'Helvetica-Bold', color: '#2c3e50' },
@@ -33,7 +38,9 @@ const minimalStyles = StyleSheet.create({
     page: { padding: 40, fontFamily: 'Helvetica', fontSize: 10, color: '#444', lineHeight: 1.5 },
     section: { marginBottom: 20 },
     name: { fontSize: 22, color: '#111', marginBottom: 6, letterSpacing: 1 },
-    contact: { fontSize: 9, color: '#666', marginBottom: 24 },
+    contactWrapper: { display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', marginBottom: 24 },
+    contactItem: { fontSize: 9, color: '#666', marginRight: 12, marginBottom: 4 },
+    linkItem: { fontSize: 9, color: '#666', marginRight: 12, marginBottom: 4, textDecoration: 'none' },
     sectionTitle: { fontFamily: 'Helvetica-Bold', fontSize: 11, color: '#333', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12 },
     flexRow: { display: 'flex', flexDirection: 'row', marginBottom: 10 },
     leftCol: { width: 100, color: '#666', fontSize: 9 },
@@ -44,13 +51,39 @@ const minimalStyles = StyleSheet.create({
     bulletText: { flex: 1, fontSize: 10 }
 });
 
+// --- SHARED COMPONENTS ---
+
+const ContactSection = ({ personalInfo, styles, templateId }) => {
+    if (!personalInfo) return null;
+    const items = [personalInfo.email, personalInfo.phone, personalInfo.location].filter(Boolean);
+    const separator = templateId === 'modern' ? '•' : templateId === 'minimal' ? '/' : '|';
+    
+    return (
+        <View style={styles.contactWrapper}>
+            {items.map((item, i) => (
+                <Text key={i} style={styles.contactItem}>
+                    {item} {i < items.length - 1 || (personalInfo.links && personalInfo.links.length > 0) ? ` ${separator} ` : ''}
+                </Text>
+            ))}
+            {personalInfo.links && personalInfo.links.map((link, i) => {
+                const validUrl = validateAndFormatURL(link.url);
+                return validUrl ? (
+                    <View key={`link-${i}`} style={{ display: 'flex', flexDirection: 'row' }}>
+                        <Link src={validUrl} style={styles.linkItem}>{link.platform}</Link>
+                        {i < personalInfo.links.length - 1 ? <Text style={styles.contactItem}>{` ${separator} `}</Text> : null}
+                    </View>
+                ) : null;
+            })}
+        </View>
+    );
+};
+
+// --- TEMPLATES ---
 
 const PDFClassic = ({ data }) => (
     <Page size="A4" style={classicStyles.page}>
         <Text style={classicStyles.name}>{data.personalInfo?.fullName}</Text>
-        <Text style={classicStyles.contact}>
-            {[data.personalInfo?.email, data.personalInfo?.phone, data.personalInfo?.location].filter(Boolean).join('  |  ')}
-        </Text>
+        <ContactSection personalInfo={data.personalInfo} styles={classicStyles} templateId="classic" />
 
         {data.professionalSummary && (
             <View style={classicStyles.section}>
@@ -112,7 +145,7 @@ const PDFClassic = ({ data }) => (
                 ))}
             </View>
         )}
-
+        
         {data.additionalSections?.length > 0 && data.additionalSections.map((section, idx) => (
             <View key={idx} style={classicStyles.section} wrap={false}>
                 <Text style={classicStyles.sectionTitle}>{section.sectionTitle}</Text>
@@ -134,9 +167,7 @@ const PDFClassic = ({ data }) => (
 const PDFModern = ({ data }) => (
     <Page size="A4" style={modernStyles.page}>
         <Text style={modernStyles.name}>{data.personalInfo?.fullName}</Text>
-        <Text style={modernStyles.contact}>
-            {[data.personalInfo?.email, data.personalInfo?.phone, data.personalInfo?.location].filter(Boolean).join(' • ')}
-        </Text>
+        <ContactSection personalInfo={data.personalInfo} styles={modernStyles} templateId="modern" />
 
         {data.professionalSummary && (
             <View style={modernStyles.section}>
@@ -194,7 +225,7 @@ const PDFModern = ({ data }) => (
                 ))}
             </View>
         )}
-
+        
         {data.additionalSections?.length > 0 && data.additionalSections.map((section, idx) => (
             <View key={idx} style={modernStyles.section} wrap={false}>
                 <Text style={modernStyles.sectionTitle}>{section.sectionTitle}</Text>
@@ -216,9 +247,7 @@ const PDFModern = ({ data }) => (
 const PDFMinimal = ({ data }) => (
     <Page size="A4" style={minimalStyles.page}>
         <Text style={minimalStyles.name}>{data.personalInfo?.fullName}</Text>
-        <Text style={minimalStyles.contact}>
-            {[data.personalInfo?.email, data.personalInfo?.phone, data.personalInfo?.location].filter(Boolean).join('   /   ')}
-        </Text>
+        <ContactSection personalInfo={data.personalInfo} styles={minimalStyles} templateId="minimal" />
 
         {data.professionalSummary && (
             <View style={minimalStyles.section}>
@@ -275,14 +304,14 @@ const PDFMinimal = ({ data }) => (
                 <View style={{ display: 'flex', flexDirection: 'column' }}>
                     {data.skills.map((skillGroup, i) => (
                         <Text key={i} style={{ marginBottom: 4 }}>
-                            <Text style={minimalStyles.bold}>{skillGroup.category} </Text>
+                            <Text style={minimalStyles.bold}>{skillGroup.category} </Text> 
                             — {skillGroup.items?.join(', ')}
                         </Text>
                     ))}
                 </View>
             </View>
         )}
-
+        
         {data.additionalSections?.length > 0 && data.additionalSections.map((section, idx) => (
             <View key={idx} style={minimalStyles.section} wrap={false}>
                 <Text style={minimalStyles.sectionTitle}>{section.sectionTitle}</Text>
@@ -303,6 +332,7 @@ const PDFMinimal = ({ data }) => (
     </Page>
 );
 
+// --- EXPORT FUNCTION ---
 
 export const downloadPDF = async (resumeData, templateId) => {
     let SelectedTemplate;

@@ -1,142 +1,233 @@
 .container {
-    width: 100%;
-    max-width: 650px;
-    margin: 0 auto;
-    padding: 24px;
-    background-color: #ffffff;
+    background: #ffffff;
     border-radius: 12px;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    text-align: left;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    padding: 32px;
+    max-width: 900px;
+    margin: 0 auto;
+    color: #1a1a1a;
 }
 
 .header {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid #f0f0f0;
-    padding-bottom: 16px;
-    margin-bottom: 20px;
+    align-items: flex-start;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #eaeaea;
+    gap: 24px;
 }
 
 .title {
-    font-size: 1.5rem;
-    font-weight: 700;
+    margin: 0 0 12px 0;
+    font-size: 1.75rem;
     color: #1a1a1a;
+}
+
+.summary {
+    color: #4a4a4a;
+    line-height: 1.6;
     margin: 0;
 }
 
-.scoreBadge {
+.scoreContainer {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    width: 70px;
-    height: 70px;
+    flex-shrink: 0;
+}
+
+.scoreCircle {
+    width: 90px;
+    height: 90px;
     border-radius: 50%;
-    background-color: #e6f4ea;
-    color: #137333;
-    font-weight: 700;
-    border: 2px solid #34a853;
+    background: linear-gradient(135deg, #e6f4ea 0%, #ceead6 100%);
+    border: 4px solid #137333;
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    padding-top: 26px;
+    box-sizing: border-box;
+    margin-bottom: 8px;
 }
 
 .scoreNumber {
-    font-size: 1.4rem;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #137333;
 }
 
 .scoreLabel {
-    font-size: 0.65rem;
+    font-size: 0.9rem;
+    color: #137333;
+    font-weight: 600;
+    margin-left: 2px;
+}
+
+.scoreSubtitle {
+    font-size: 0.85rem;
+    color: #70757a;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.summaryBox {
-    background-color: #f8f9fa;
-    padding: 16px;
-    border-radius: 8px;
-    border-left: 4px solid #0066ff;
-    margin-bottom: 24px;
-    font-size: 0.95rem;
-    color: #3c4043;
-    line-height: 1.5;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 24px;
-}
-
-@media (max-width : 600px) {
-    .grid {
-        grid-template-columns: 1fr;
-    }
+.section {
+    margin-bottom: 32px;
 }
 
 .sectionTitle {
-    font-size: 1rem;
+    font-size: 1.25rem;
+    margin: 0 0 16px 0;
+    color: #1a1a1a;
     font-weight: 600;
-    margin-bottom: 10px;
-    color: #202124;
 }
 
+.subHeading {
+    font-size: 1.05rem;
+    margin: 0 0 12px 0;
+    color: #1a1a1a;
+}
+
+.breakdownGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 16px;
+}
+
+.metricCard {
+    background-color: #f8f9fa;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.metricLabel {
+    font-size: 0.85rem;
+    color: #4a4a4a;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.metricValue {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0066ff;
+}
+
+.grid2Col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.card {
+    background-color: #ffffff;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.successText { color: #137333; }
+.dangerText { color: #d93025; }
+
 .list {
-    list-style: none;
-    padding: 0;
+    margin: 0;
+    padding-left: 20px;
+    color: #4a4a4a;
+}
+
+.list li {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.emptyText {
+    color: #70757a;
+    font-style: italic;
     margin: 0;
 }
 
-.listItem {
-    position: relative;
-    padding-left: 20px;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-    color: #4a4a4a;
-    line-height: 1.4;
-}
-
-.strengthItem::before {
-    content: "✓";
-    position: absolute;
-    left: 0;
-    color: #137333;
-    font-weight: bold;
-}
-
-.weaknessItem::before {
-    content: "⚠️";
-    position: absolute;
-    left: 0;
-    font-size: 0.8rem;
-}
-
-.keywordsContainer {
+.tagCloud {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
+    gap: 10px;
 }
 
-.keywordTag {
-  background-color: #e8f0fe;
-  color: #1a73e8;
-  padding: 6px 12px;
-  border-radius: 16px;
-  font-size: 0.85rem;
-  font-weight: 500;
+.tag {
+    background-color: #f0f7ff;
+    color: #0052cc;
+    border: 1px solid #cce4ff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
 }
 
-.resetBtn {
-  margin-top: 24px;
-  width: 100%;
-  padding: 12px;
-  background-color: #f1f3f4;
-  color: #3c4043;
-  border: 1px solid #dadce0;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
+/* Feedback Boxes */
+.gapWarningBox {
+    background-color: #fff8f6;
+    border: 1px solid #facdcd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
 }
 
+.infoWarningBox {
+    background-color: #f8f9fa;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.actionContainer {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #eaeaea;
+    text-align: center;
+}
+
+.resetButton {
+    background-color: #ffffff;
+    color: #4a4a4a;
+    border: 1px solid #dadce0;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.resetButton:hover {
+    background-color: #f8f9fa;
+    border-color: #d2d2d2;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .grid2Col {
+        grid-template-columns: 1fr;
+    }
+
+    .breakdownGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

@@ -24,6 +24,13 @@ const DashboardPage = () => {
         fetchHistory();
     }, []);
 
+    const getFormattedScore = (atsScore) => {
+        if (typeof atsScore === 'object' && atsScore !== null) {
+            return atsScore.total || 0;
+        }
+        return atsScore || 0;
+    };
+
     return (
         <div className={styles.container}>
             <h1 className={styles.title}>Welcome, {user?.name || "User"}</h1>
@@ -48,7 +55,9 @@ const DashboardPage = () => {
                                 {item.title || "Untitled Resume Analysis"}
                             </h3>
                             <div className={styles.cardHeader}>
-                                <span className={styles.scoreBadge}>ATS Score: {item.analysisResults?.atsScore || 0}</span>
+                                <span className={styles.scoreBadge}>
+                                    ATS Score: {getFormattedScore(item.analysisResults?.atsScore)}
+                                </span>
                                 <span className={styles.dateText}>{new Date(item.createdAt).toLocaleDateString()}</span>
                             </div>
                             <div className={styles.buttonGroup}>

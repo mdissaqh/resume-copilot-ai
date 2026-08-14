@@ -2,6 +2,8 @@ import { extractTextFromPDF, extractTextFromDOCX } from "../services/documentPar
 import { generateResumeAnalysis } from "../services/ai.service.js";
 import Analysis from "../models/analysis.model.js";
 
+const MAX_TEXT_LENGTH = 15000;
+
 export const analyzeResume = async (req, res) => {
     try {
         const file = req.file;
@@ -12,6 +14,14 @@ export const analyzeResume = async (req, res) => {
         if (file.mimetype === "application/pdf") parsedText = await extractTextFromPDF(file.buffer);
         else if (file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") parsedText = await extractTextFromDOCX(file.buffer);
         else return res.status(400).json({ message: "Unsupported file format." });
+
+        if (!parsedText || parsedText.trim().length === 0) {
+            return res.status(400).json({ message: "Could not extract text from document." });
+        }
+
+        if (parsedText.length > MAX_TEXT_LENGTH) {
+            return res.status(400).json({ message: "Document is unusually large (exceeds 15,000 characters). Please upload a standard resume." });
+        }
 
         const aiAnalysisResult = await generateResumeAnalysis(parsedText, jobDescription);
 

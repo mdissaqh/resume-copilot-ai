@@ -1,4 +1,5 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, TabStopType, TabStopPosition } from "docx";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, TabStopType, TabStopPosition, ExternalHyperlink } from "docx";
+import { validateAndFormatURL } from '../../../utils/urlValidator';
 
 const getTemplateConfig = (templateId) => {
     switch (templateId) {
@@ -42,7 +43,7 @@ export const downloadDOCX = async (resumeData, templateId) => {
         sections.push(new Paragraph({
             children: [
                 new TextRun({ 
-                    text: resumeData.personalInfo.fullName?.toUpperCase(), 
+                    text: resumeData.personalInfo.fullName?.toUpperCase() || "NAME", 
                     size: templateId === 'modern' ? 32 : 28, 
                     bold: templateId !== 'minimal', 
                     color: config.textColor 
@@ -52,11 +53,32 @@ export const downloadDOCX = async (resumeData, templateId) => {
             spacing: { after: 100 }
         }));
         
-        const contactArr = [resumeData.personalInfo.email, resumeData.personalInfo.phone, resumeData.personalInfo.location].filter(Boolean);
+        const contactChildren = [];
+        const items = [resumeData.personalInfo.email, resumeData.personalInfo.phone, resumeData.personalInfo.location].filter(Boolean);
         const separator = templateId === 'modern' ? ' • ' : templateId === 'minimal' ? '   /   ' : '  |  ';
         
+        items.forEach((item, i) => {
+            contactChildren.push(new TextRun({ text: item, size: 20, color: config.secondaryColor }));
+            if (i < items.length - 1 || (resumeData.personalInfo.links?.length > 0)) {
+                contactChildren.push(new TextRun({ text: separator, size: 20, color: config.secondaryColor }));
+            }
+        });
+
+        resumeData.personalInfo.links?.forEach((link, i) => {
+            const validUrl = validateAndFormatURL(link.url);
+            if (validUrl) {
+                contactChildren.push(new ExternalHyperlink({
+                    children: [new TextRun({ text: link.platform, style: "Hyperlink", size: 20 })],
+                    link: validUrl
+                }));
+                if (i < resumeData.personalInfo.links.length - 1) {
+                    contactChildren.push(new TextRun({ text: separator, size: 20, color: config.secondaryColor }));
+                }
+            }
+        });
+
         sections.push(new Paragraph({
-            children: [new TextRun({ text: contactArr.join(separator), size: 20, color: config.secondaryColor })],
+            children: contactChildren,
             alignment: config.contactAlign,
             border: templateId === 'classic' ? { bottom: { color: "000000", space: 1, value: "single", size: 6 } } : undefined,
             spacing: { after: 300 }
@@ -96,6 +118,7 @@ export const downloadDOCX = async (resumeData, templateId) => {
         });
     }
 
+    // Education
     if (resumeData.education?.length > 0) {
         sections.push(new Paragraph({ text: "EDUCATION", heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
         resumeData.education.forEach(edu => {
@@ -117,6 +140,7 @@ export const downloadDOCX = async (resumeData, templateId) => {
         });
     }
 
+    // Skills
     if (resumeData.skills?.length > 0) {
         const title = templateId === 'minimal' ? "EXPERTISE" : "SKILLS";
         sections.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
@@ -131,6 +155,7 @@ export const downloadDOCX = async (resumeData, templateId) => {
         });
     }
 
+    // Additional Sections
     if (resumeData.additionalSections?.length > 0) {
         resumeData.additionalSections.forEach(section => {
             sections.push(new Paragraph({ text: section.sectionTitle?.toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 100 } }));
@@ -160,10 +185,21 @@ export const downloadDOCX = async (resumeData, templateId) => {
                     run: { font: config.font, size: templateId === 'minimal' ? 22 : 24, bold: true, color: config.primaryColor },
                     paragraph: { border: templateId !== 'minimal' ? { bottom: { color: templateId === 'modern' ? "ECF0F1" : "000000", space: 1, value: "single", size: templateId === 'modern' ? 12 : 6 } } : undefined }
                 },
-                document: { run: { font: config.font, size: 20, color: config.textColor } } // 20 half-points = 10pt
+                document: { run: { font: config.font, size: 20, color: config.textColor } } 
             },
             paragraphStyles: [
                 { id: "normalText", name: "Normal Text", basedOn: "Normal", run: { font: config.font, size: 20, color: config.textColor } }
+            ],
+            characterStyles: [
+                {
+                    id: "Hyperlink",
+                    name: "Hyperlink",
+                    basedOn: "Default Paragraph Font",
+                    run: {
+                        color: templateId === 'modern' ? "2980B9" : "0000EE",
+                        underline: { type: "single" }
+                    }
+                }
             ]
         },
         sections: [{ children: sections }]
