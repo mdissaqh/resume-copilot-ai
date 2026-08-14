@@ -16,11 +16,11 @@ export const analyzeResume = async (req, res) => {
         else return res.status(400).json({ message: "Unsupported file format." });
 
         if (!parsedText || parsedText.trim().length === 0) {
-            return res.status(400).json({ message: "Could not extract text from document." });
+            return res.status(400).json({ message: "Could not extract text from document. Please ensure it is a readable resume." });
         }
 
         if (parsedText.length > MAX_TEXT_LENGTH) {
-            return res.status(400).json({ message: "Document is unusually large (exceeds 15,000 characters). Please upload a standard resume." });
+            return res.status(400).json({ message: "Document is unusually large (exceeds 15,000 characters). Please upload a standard resume to ensure optimal AI performance." });
         }
 
         const aiAnalysisResult = await generateResumeAnalysis(parsedText, jobDescription);
@@ -66,6 +66,7 @@ export const migrateGuestAnalysis = async (req, res) => {
 
         res.status(200).json({ success: true, message: "Guest data migrated successfully." });
     } catch (error) {
+        console.error("Error migrating guest analysis:", error);
         res.status(500).json({ success: false, message: "Internal server error during migration." });
     }
 };

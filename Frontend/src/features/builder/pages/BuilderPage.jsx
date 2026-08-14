@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { generateResumeApi, saveResumeApi } from "../api/builder.api";
+import { getAnalysisByIdApi } from "../../dashboard/api/dashboard.api";
 import Editor from "../components/Editor/Editor";
 import Preview from "../components/Preview/Preview";
+import FeedbackPanel from "../components/FeedbackPanel/FeedbackPanel";
 import styles from "../styles/BuilderPage.module.css";
 import { downloadPDF } from "../utils/pdfExport";
 import { downloadDOCX } from "../utils/docxExport";
@@ -11,6 +13,7 @@ const BuilderPage = () => {
     const { id } = useParams();
     const [dbResumeId, setDbResumeId] = useState(null);
     const [resumeData, setResumeData] = useState(null);
+    const [analysisData, setAnalysisData] = useState(null);
     const [templateId, setTemplateId] = useState("classic");
     
     const [loading, setLoading] = useState(true);
@@ -28,6 +31,11 @@ const BuilderPage = () => {
     useEffect(() => {
         const fetchAndGenerate = async () => {
             try {
+                // Fetch analysis metadata for feedback panel
+                const analysisReq = await getAnalysisByIdApi(id);
+                setAnalysisData(analysisReq.analysis.analysisResults);
+
+                // Fetch/Generate resume JSON
                 const data = await generateResumeApi(id);
                 setDbResumeId(data.resume._id);
                 setResumeData(data.resume.content);
@@ -113,7 +121,6 @@ const BuilderPage = () => {
                 </div>
                 <div className={styles.templateSelection}>
                     <h2>Choose Your Resume Layout</h2>
-                    <p style={{ color: '#70757a', marginTop: '10px' }}>Select a starting template.</p>
                     <div className={styles.templateGrid}>
                         {['classic', 'modern', 'minimal'].map(t => (
                             <div key={t} className={styles.templateCard} onClick={() => { setTemplateId(t); setIsDirty(true); setStep("workspace"); }}>
@@ -160,7 +167,8 @@ const BuilderPage = () => {
 
             <div className={styles.workspace}>
                 <div className={`${styles.editorPane} ${activeTab === 'editor' ? styles.paneActive : ''}`}>
-                    <Editor resumeData={resumeData} onChange={updateResumeData} />
+                    <FeedbackPanel analysisResults={analysisData} />
+                    <Editor resumeData={resumeData} onChange={updateResumeData} analysisResults={analysisData} />
                 </div>
                 <div className={`${styles.previewPane} ${activeTab === 'preview' ? styles.paneActive : ''}`}>
                     <Preview resumeData={resumeData} templateId={templateId} />

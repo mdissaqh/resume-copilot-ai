@@ -3,9 +3,11 @@ import styles from './FeedbackPanel.module.css';
 const FeedbackPanel = ({ analysisResults }) => {
     if (!analysisResults) return null;
     
-    const { jdGaps, missingInformation } = analysisResults;
-    const hasGaps = jdGaps && jdGaps.length > 0;
-    const hasMissingInfo = missingInformation && missingInformation.length > 0;
+    const jdGaps = Array.isArray(analysisResults.jdGaps) ? analysisResults.jdGaps : [];
+    const missingInfo = Array.isArray(analysisResults.missingInformation) ? analysisResults.missingInformation : [];
+
+    const hasGaps = jdGaps.length > 0;
+    const hasMissingInfo = missingInfo.length > 0;
 
     if (!hasGaps && !hasMissingInfo) return null;
 
@@ -27,9 +29,9 @@ const FeedbackPanel = ({ analysisResults }) => {
 
             {hasMissingInfo && (
                 <div className={styles.feedbackSection}>
-                    <h4 className={styles.infoHeading}>💡 Recommended Information</h4>
+                    <h4 className={styles.infoHeading}>💡 Recommended Improvements</h4>
                     <ul className={styles.infoList}>
-                        {missingInformation.map((info, i) => (
+                        {missingInfo.map((info, i) => (
                             <li key={i}><strong>{info.label}:</strong> {info.reason}</li>
                         ))}
                     </ul>

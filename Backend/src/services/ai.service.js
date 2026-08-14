@@ -12,7 +12,7 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
         let prompt = `You are an expert ATS software and Senior Technical Recruiter. Deeply analyze the following resume text. `;
 
         if (jobDescription) {
-            prompt += `Compare against this Job Description: "${jobDescription}". Identify critical missing skills. `;
+            prompt += `Compare against this Job Description: "${jobDescription}". Identify critical missing skills. Do NOT hallucinate skills. `;
         }
         
         prompt += `
@@ -21,7 +21,7 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
 
         You MUST return a JSON object with this EXACT structure:
         {
-            "analysisTitle": "A concise, meaningful identifier for this record (e.g., 'Senior Frontend Developer Analysis'). Max 6 words.",
+            "analysisTitle": "A concise, meaningful identifier for this record (e.g., 'Senior Frontend Developer Analysis' or 'Student Resume Analysis'). Max 6 words.",
             "atsScore": {
                 "total": Number (0-100),
                 "parseability": Number (0-100),
@@ -38,7 +38,7 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
                 { "skill": "String", "reason": "String explaining why this JD requirement is missing from the resume." }
             ],
             "missingInformation": [
-                { "field": "String (e.g., 'linkedin', 'portfolio')", "label": "String", "reason": "String", "priority": "high|medium|low" }
+                { "field": "String (e.g., 'linkedin', 'portfolio', 'projectMetrics')", "label": "String", "reason": "String", "priority": "high|medium|low" }
             ]
         }`;
 
@@ -58,10 +58,13 @@ export const generateStructuredResume = async (resumeText, jobDescription) => {
         });
 
         let prompt = `You are an elite Executive Resume Writer. Rewrite and format the resume into an ATS-optimized JSON structure.
-        CRITICAL RULES: DO NOT HALLUCINATE OR FABRICATE. Do NOT invent URLs, metrics, or skills. `;
+        CRITICAL RULES:
+        1. DO NOT HALLUCINATE OR FABRICATE. Do NOT invent URLs, metrics, job titles, or skills.
+        2. NEVER REMOVE USEFUL INFORMATION. If the candidate lists Projects, keep them as Projects. Do NOT invent employment history (like "Developer") for a personal project.
+        3. QUANTIFICATION: Emphasize existing metrics. Do not invent new ones. `;
 
         if (jobDescription) {
-            prompt += `Tailor to this JD: "${jobDescription}". Do NOT add skills the candidate does not have. `;
+            prompt += `\n4. TAILORING: Tailor to this JD: "${jobDescription}". Prioritize relevant skills, but do NOT add skills the candidate does not have. `;
         }
 
         prompt += `
@@ -71,12 +74,14 @@ export const generateStructuredResume = async (resumeText, jobDescription) => {
         {
           "personalInfo": { 
              "fullName": "String", "email": "String", "phone": "String", "location": "String",
-             "links": [{ "platform": "String (e.g., LinkedIn)", "url": "String" }]
+             "links": [{ "platform": "String (e.g., LinkedIn, GitHub, Portfolio)", "url": "String" }]
           },
           "professionalSummary": "String",
           "experience": [ { "organization": "String", "role": "String", "location": "String", "startDate": "String", "endDate": "String", "description": "String", "achievements": ["String (Include quantified metrics if present in original text)"] } ],
+          "projects": [ { "title": "String", "role": "String (Optional)", "date": "String (Optional)", "url": "String (Optional)", "description": "String", "highlights": ["String"] } ],
           "education": [ { "institution": "String", "degree": "String", "fieldOfStudy": "String", "location": "String", "startDate": "String", "endDate": "String" } ],
           "skills": [ { "category": "String", "items": ["String"] } ],
+          "certifications": [ { "name": "String", "issuer": "String", "date": "String" } ],
           "additionalSections": [ { "sectionTitle": "String", "items": [ { "heading": "String", "subheading": "String", "date": "String", "description": "String" } ] } ]
         }`;
 

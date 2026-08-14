@@ -1,66 +1,28 @@
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, TabStopType, TabStopPosition, ExternalHyperlink } from "docx";
 import { validateAndFormatURL } from '../../../utils/urlValidator';
 
-const getTemplateConfig = (templateId) => {
-    switch (templateId) {
-        case 'modern':
-            return {
-                font: "Arial",
-                nameAlign: AlignmentType.LEFT,
-                contactAlign: AlignmentType.LEFT,
-                primaryColor: "2980B9",
-                secondaryColor: "7F8C8D",
-                textColor: "2C3E50"
-            };
-        case 'minimal':
-            return {
-                font: "Arial",
-                nameAlign: AlignmentType.LEFT,
-                contactAlign: AlignmentType.LEFT,
-                primaryColor: "333333",
-                secondaryColor: "666666",
-                textColor: "444444"
-            };
-        case 'classic':
-        default:
-            return {
-                font: "Times New Roman",
-                nameAlign: AlignmentType.CENTER,
-                contactAlign: AlignmentType.CENTER,
-                primaryColor: "000000",
-                secondaryColor: "000000",
-                textColor: "000000"
-            };
-    }
-};
-
 export const downloadDOCX = async (resumeData, templateId) => {
-    const config = getTemplateConfig(templateId);
     const sections = [];
 
-    // Personal Info
     if (resumeData.personalInfo) {
         sections.push(new Paragraph({
             children: [
                 new TextRun({ 
                     text: resumeData.personalInfo.fullName?.toUpperCase() || "NAME", 
-                    size: templateId === 'modern' ? 32 : 28, 
-                    bold: templateId !== 'minimal', 
-                    color: config.textColor 
+                    size: 28, bold: true, color: "000000" 
                 })
             ],
-            alignment: config.nameAlign,
+            alignment: AlignmentType.CENTER,
             spacing: { after: 100 }
         }));
         
         const contactChildren = [];
         const items = [resumeData.personalInfo.email, resumeData.personalInfo.phone, resumeData.personalInfo.location].filter(Boolean);
-        const separator = templateId === 'modern' ? ' • ' : templateId === 'minimal' ? '   /   ' : '  |  ';
         
         items.forEach((item, i) => {
-            contactChildren.push(new TextRun({ text: item, size: 20, color: config.secondaryColor }));
+            contactChildren.push(new TextRun({ text: item, size: 20, color: "000000" }));
             if (i < items.length - 1 || (resumeData.personalInfo.links?.length > 0)) {
-                contactChildren.push(new TextRun({ text: separator, size: 20, color: config.secondaryColor }));
+                contactChildren.push(new TextRun({ text: "  |  ", size: 20, color: "000000" }));
             }
         });
 
@@ -72,42 +34,39 @@ export const downloadDOCX = async (resumeData, templateId) => {
                     link: validUrl
                 }));
                 if (i < resumeData.personalInfo.links.length - 1) {
-                    contactChildren.push(new TextRun({ text: separator, size: 20, color: config.secondaryColor }));
+                    contactChildren.push(new TextRun({ text: "  |  ", size: 20, color: "000000" }));
                 }
             }
         });
 
         sections.push(new Paragraph({
             children: contactChildren,
-            alignment: config.contactAlign,
-            border: templateId === 'classic' ? { bottom: { color: "000000", space: 1, value: "single", size: 6 } } : undefined,
+            alignment: AlignmentType.CENTER,
+            border: { bottom: { color: "000000", space: 1, value: "single", size: 6 } },
             spacing: { after: 300 }
         }));
     }
 
-    // Professional Summary
     if (resumeData.professionalSummary) {
-        const title = templateId === 'minimal' ? "ABOUT" : templateId === 'modern' ? "SUMMARY" : "PROFESSIONAL SUMMARY";
-        sections.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
+        sections.push(new Paragraph({ text: "PROFESSIONAL SUMMARY", heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
         sections.push(new Paragraph({ text: resumeData.professionalSummary, spacing: { after: 200 }, style: "normalText" }));
     }
 
-    // Experience
     if (resumeData.experience?.length > 0) {
         sections.push(new Paragraph({ text: "EXPERIENCE", heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
         resumeData.experience.forEach(exp => {
             sections.push(new Paragraph({
                 tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
                 children: [
-                    new TextRun({ text: exp.role, bold: true, color: config.textColor }),
-                    new TextRun({ text: `\t${exp.startDate} - ${exp.endDate}`, bold: templateId === 'classic', color: config.secondaryColor })
+                    new TextRun({ text: exp.role, bold: true, color: "000000" }),
+                    new TextRun({ text: `\t${exp.startDate} - ${exp.endDate}`, bold: true, color: "000000" })
                 ]
             }));
             sections.push(new Paragraph({
                 tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
                 children: [
-                    new TextRun({ text: exp.organization, italics: templateId === 'classic', bold: templateId === 'modern', color: config.textColor }),
-                    new TextRun({ text: `\t${exp.location || ''}`, italics: templateId === 'classic' })
+                    new TextRun({ text: exp.organization, italics: true, color: "000000" }),
+                    new TextRun({ text: `\t${exp.location || ''}`, italics: true })
                 ],
                 spacing: { after: 100 }
             }));
@@ -118,14 +77,33 @@ export const downloadDOCX = async (resumeData, templateId) => {
         });
     }
 
-    // Education
+    if (resumeData.projects?.length > 0) {
+        sections.push(new Paragraph({ text: "PROJECTS", heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
+        resumeData.projects.forEach(proj => {
+            sections.push(new Paragraph({
+                tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+                children: [
+                    new TextRun({ text: proj.title, bold: true, color: "000000" }),
+                    new TextRun({ text: `\t${proj.date || ''}`, bold: true, color: "000000" })
+                ]
+            }));
+            if (proj.description) {
+                sections.push(new Paragraph({ text: proj.description, style: "normalText", spacing: { after: 100 } }));
+            }
+            proj.highlights?.forEach(ach => {
+                sections.push(new Paragraph({ text: ach, bullet: { level: 0 }, style: "normalText" }));
+            });
+            sections.push(new Paragraph({ text: "", spacing: { after: 100 } }));
+        });
+    }
+
     if (resumeData.education?.length > 0) {
         sections.push(new Paragraph({ text: "EDUCATION", heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
         resumeData.education.forEach(edu => {
             sections.push(new Paragraph({
                 tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
                 children: [
-                    new TextRun({ text: edu.institution, bold: true, color: config.textColor }),
+                    new TextRun({ text: edu.institution, bold: true, color: "000000" }),
                     new TextRun({ text: `\t${edu.location || ''}` })
                 ]
             }));
@@ -133,21 +111,19 @@ export const downloadDOCX = async (resumeData, templateId) => {
                 tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
                 children: [
                     new TextRun({ text: `${edu.degree} ${edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}`, style: "normalText" }),
-                    new TextRun({ text: `\t${edu.startDate} - ${edu.endDate}`, color: config.secondaryColor })
+                    new TextRun({ text: `\t${edu.startDate} - ${edu.endDate}`, color: "000000" })
                 ],
                 spacing: { after: 100 }
             }));
         });
     }
 
-    // Skills
     if (resumeData.skills?.length > 0) {
-        const title = templateId === 'minimal' ? "EXPERTISE" : "SKILLS";
-        sections.push(new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
+        sections.push(new Paragraph({ text: "SKILLS", heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
         resumeData.skills.forEach(skill => {
             sections.push(new Paragraph({
                 children: [
-                    new TextRun({ text: `${skill.category}: `, bold: true, color: config.textColor }),
+                    new TextRun({ text: `${skill.category}: `, bold: true, color: "000000" }),
                     new TextRun({ text: skill.items?.join(', '), style: "normalText" })
                 ],
                 spacing: { after: 50 }
@@ -155,50 +131,24 @@ export const downloadDOCX = async (resumeData, templateId) => {
         });
     }
 
-    // Additional Sections
-    if (resumeData.additionalSections?.length > 0) {
-        resumeData.additionalSections.forEach(section => {
-            sections.push(new Paragraph({ text: section.sectionTitle?.toUpperCase(), heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 100 } }));
-            section.items?.forEach(item => {
-                sections.push(new Paragraph({
-                    tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
-                    children: [
-                        new TextRun({ text: item.heading, bold: true, color: config.textColor }),
-                        new TextRun({ text: `\t${item.date || ''}`, color: config.secondaryColor })
-                    ]
-                }));
-                sections.push(new Paragraph({
-                    children: [new TextRun({ text: item.subheading, italics: templateId === 'classic', bold: templateId === 'modern' })]
-                }));
-                if (item.description) {
-                    sections.push(new Paragraph({ text: item.description, style: "normalText", spacing: { before: 50 } }));
-                }
-                sections.push(new Paragraph({ text: "", spacing: { after: 100 } }));
-            });
-        });
-    }
-
     const doc = new Document({
         styles: {
             default: {
                 heading2: { 
-                    run: { font: config.font, size: templateId === 'minimal' ? 22 : 24, bold: true, color: config.primaryColor },
-                    paragraph: { border: templateId !== 'minimal' ? { bottom: { color: templateId === 'modern' ? "ECF0F1" : "000000", space: 1, value: "single", size: templateId === 'modern' ? 12 : 6 } } : undefined }
+                    run: { font: "Times New Roman", size: 24, bold: true, color: "000000" },
+                    paragraph: { border: { bottom: { color: "000000", space: 1, value: "single", size: 6 } } }
                 },
-                document: { run: { font: config.font, size: 20, color: config.textColor } } 
+                document: { run: { font: "Times New Roman", size: 20, color: "000000" } } 
             },
             paragraphStyles: [
-                { id: "normalText", name: "Normal Text", basedOn: "Normal", run: { font: config.font, size: 20, color: config.textColor } }
+                { id: "normalText", name: "Normal Text", basedOn: "Normal", run: { font: "Times New Roman", size: 20, color: "000000" } }
             ],
             characterStyles: [
                 {
                     id: "Hyperlink",
                     name: "Hyperlink",
                     basedOn: "Default Paragraph Font",
-                    run: {
-                        color: templateId === 'modern' ? "2980B9" : "0000EE",
-                        underline: { type: "single" }
-                    }
+                    run: { color: "0000EE", underline: { type: "single" } }
                 }
             ]
         },

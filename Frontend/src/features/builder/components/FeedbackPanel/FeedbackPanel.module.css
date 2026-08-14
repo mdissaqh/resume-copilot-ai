@@ -1,0 +1,51 @@
+.panelContainer {
+    background-color: #ffffff;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.panelTitle {
+    font-size: 1.1rem;
+    color: #1a1a1a;
+    margin: 0 0 16px 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.feedbackSection {
+    margin-bottom: 16px;
+}
+
+.warningHeading {
+    color: #d93025;
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+}
+
+.infoHeading {
+    color: #0066ff;
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+}
+
+.helperText {
+    font-size: 0.85rem;
+    color: #70757a;
+    margin: 0 0 12px 0;
+    line-height: 1.4;
+}
+
+.gapList, .infoList {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 0.9rem;
+    color: #4a4a4a;
+    line-height: 1.5;
+}
+
+.gapList li, .infoList li {
+    margin-bottom: 6px;
+}

@@ -1,71 +1,81 @@
+import { useState, useEffect } from 'react';
 import styles from '../../styles/Editor.module.css';
 
-const Editor = ({ resumeData, onChange }) => {
-    
+const Editor = ({ resumeData, onChange, analysisResults }) => {
+    const [localData, setLocalData] = useState(resumeData);
+
+    useEffect(() => {
+        setLocalData(resumeData);
+    }, [resumeData]);
+
     const handleTextChange = (path, value) => {
-        onChange(path, value);
+        const newData = JSON.parse(JSON.stringify(localData));
+        let current = newData;
+        for (let i = 0; i < path.length - 1; i++) {
+            if (current[path[i]] === undefined) current[path[i]] = {};
+            current = current[path[i]];
+        }
+        current[path[path.length - 1]] = value;
+        setLocalData(newData);
+        
+        // Debounce external change
+        const handler = setTimeout(() => {
+            onChange(path, value);
+        }, 300);
+        return () => clearTimeout(handler);
     };
 
     const handleArrayTextChange = (path, value) => {
         const arrayValue = value.split('\n').filter(line => line.trim() !== '');
-        onChange(path, arrayValue);
+        handleTextChange(path, arrayValue);
     };
 
-    const moveItem = (arrayPath, array, index, direction) => {
-        if (direction === -1 && index === 0) return;
-        if (direction === 1 && index === array.length - 1) return;
-        const newArray = [...array];
-        const temp = newArray[index];
-        newArray[index] = newArray[index + direction];
-        newArray[index + direction] = temp;
-        onChange(arrayPath, newArray);
-    };
-
-    const deleteItem = (arrayPath, array, index) => {
-        const newArray = array.filter((_, i) => i !== index);
-        onChange(arrayPath, newArray);
-    };
+    const missingInfo = analysisResults?.missingInformation || [];
 
     return (
-        <div>
+        <div className={styles.editorContainer}>
+            {/* Personal Info */}
             <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>Personal Information</h3>
                 <div className={styles.grid}>
                     <div className={styles.formGroup}>
                         <label>Full Name</label>
-                        <input className={styles.input} value={resumeData.personalInfo?.fullName || ''} onChange={(e) => handleTextChange(['personalInfo', 'fullName'], e.target.value)} />
+                        <input className={styles.input} value={localData.personalInfo?.fullName || ''} onChange={(e) => handleTextChange(['personalInfo', 'fullName'], e.target.value)} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Email</label>
-                        <input className={styles.input} value={resumeData.personalInfo?.email || ''} onChange={(e) => handleTextChange(['personalInfo', 'email'], e.target.value)} />
+                        <input className={styles.input} value={localData.personalInfo?.email || ''} onChange={(e) => handleTextChange(['personalInfo', 'email'], e.target.value)} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Phone</label>
-                        <input className={styles.input} value={resumeData.personalInfo?.phone || ''} onChange={(e) => handleTextChange(['personalInfo', 'phone'], e.target.value)} />
-                    </div>
-                    <div className={styles.formGroup}>
-                        <label>Location</label>
-                        <input className={styles.input} value={resumeData.personalInfo?.location || ''} onChange={(e) => handleTextChange(['personalInfo', 'location'], e.target.value)} />
+                        <input className={styles.input} value={localData.personalInfo?.phone || ''} onChange={(e) => handleTextChange(['personalInfo', 'phone'], e.target.value)} />
                     </div>
                 </div>
+
+                <h4 style={{ fontSize: '0.9rem', marginTop: '16px', marginBottom: '8px' }}>Professional Links</h4>
+                {localData.personalInfo?.links?.map((link, index) => (
+                    <div key={index} className={styles.grid} style={{ marginBottom: '8px' }}>
+                        <div className={styles.formGroup}>
+                            <input className={styles.input} placeholder="Platform (e.g., LinkedIn)" value={link.platform || ''} onChange={(e) => handleTextChange(['personalInfo', 'links', index, 'platform'], e.target.value)} />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <input className={styles.input} placeholder="URL" value={link.url || ''} onChange={(e) => handleTextChange(['personalInfo', 'links', index, 'url'], e.target.value)} />
+                        </div>
+                    </div>
+                ))}
+                
+                {missingInfo.filter(info => info.field === 'linkedin' || info.field === 'portfolio').map((info, idx) => (
+                    <div key={idx} style={{ backgroundColor: '#f0f7ff', padding: '10px', borderRadius: '6px', marginBottom: '8px', fontSize: '0.85rem' }}>
+                        <span style={{ color: '#0066ff', fontWeight: 'bold' }}>💡 Recommended:</span> Add your {info.label} ({info.reason})
+                    </div>
+                ))}
             </div>
 
-            <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>Professional Summary</h3>
-                <div className={styles.formGroup}>
-                    <textarea className={styles.textarea} value={resumeData.professionalSummary || ''} onChange={(e) => handleTextChange(['professionalSummary'], e.target.value)} />
-                </div>
-            </div>
-
+            {/* Experience */}
             <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>Experience</h3>
-                {resumeData.experience?.map((exp, index) => (
+                {localData.experience?.map((exp, index) => (
                     <div key={index} className={styles.arrayItem}>
-                        <div className={styles.itemHeader}>
-                            <button className={styles.controlBtn} onClick={() => moveItem(['experience'], resumeData.experience, index, -1)}>↑</button>
-                            <button className={styles.controlBtn} onClick={() => moveItem(['experience'], resumeData.experience, index, 1)}>↓</button>
-                            <button className={`${styles.controlBtn} ${styles.deleteBtn}`} onClick={() => deleteItem(['experience'], resumeData.experience, index)}>Remove</button>
-                        </div>
                         <div className={styles.grid}>
                             <div className={styles.formGroup}><label>Organization</label><input className={styles.input} value={exp.organization || ''} onChange={(e) => handleTextChange(['experience', index, 'organization'], e.target.value)} /></div>
                             <div className={styles.formGroup}><label>Role</label><input className={styles.input} value={exp.role || ''} onChange={(e) => handleTextChange(['experience', index, 'role'], e.target.value)} /></div>
@@ -80,30 +90,32 @@ const Editor = ({ resumeData, onChange }) => {
                 ))}
             </div>
 
+            {/* Projects */}
             <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>Education</h3>
-                {resumeData.education?.map((edu, index) => (
+                <h3 className={styles.sectionTitle}>Projects</h3>
+                {localData.projects?.map((proj, index) => (
                     <div key={index} className={styles.arrayItem}>
-                        <div className={styles.itemHeader}>
-                            <button className={styles.controlBtn} onClick={() => moveItem(['education'], resumeData.education, index, -1)}>↑</button>
-                            <button className={styles.controlBtn} onClick={() => moveItem(['education'], resumeData.education, index, 1)}>↓</button>
-                            <button className={`${styles.controlBtn} ${styles.deleteBtn}`} onClick={() => deleteItem(['education'], resumeData.education, index)}>Remove</button>
-                        </div>
                         <div className={styles.grid}>
-                            <div className={styles.formGroup}><label>Institution</label><input className={styles.input} value={edu.institution || ''} onChange={(e) => handleTextChange(['education', index, 'institution'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>Degree</label><input className={styles.input} value={edu.degree || ''} onChange={(e) => handleTextChange(['education', index, 'degree'], e.target.value)} /></div>
+                            <div className={styles.formGroup}><label>Project Title</label><input className={styles.input} value={proj.title || ''} onChange={(e) => handleTextChange(['projects', index, 'title'], e.target.value)} /></div>
+                            <div className={styles.formGroup}><label>Date</label><input className={styles.input} value={proj.date || ''} onChange={(e) => handleTextChange(['projects', index, 'date'], e.target.value)} /></div>
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label>Description</label>
+                            <textarea className={styles.textarea} style={{ minHeight: '60px' }} value={proj.description || ''} onChange={(e) => handleTextChange(['projects', index, 'description'], e.target.value)} />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label>Highlights / Technical Details (One per line)</label>
+                            <textarea className={styles.textarea} value={proj.highlights?.join('\n') || ''} onChange={(e) => handleArrayTextChange(['projects', index, 'highlights'], e.target.value)} />
                         </div>
                     </div>
                 ))}
             </div>
-            
+
+            {/* Skills */}
             <div className={styles.section}>
                 <h3 className={styles.sectionTitle}>Skills</h3>
-                {resumeData.skills?.map((skill, index) => (
+                {localData.skills?.map((skill, index) => (
                     <div key={index} className={styles.arrayItem}>
-                        <div className={styles.itemHeader}>
-                            <button className={`${styles.controlBtn} ${styles.deleteBtn}`} onClick={() => deleteItem(['skills'], resumeData.skills, index)}>Remove</button>
-                        </div>
                         <div className={styles.formGroup}><label>Category</label><input className={styles.input} value={skill.category || ''} onChange={(e) => handleTextChange(['skills', index, 'category'], e.target.value)} /></div>
                         <div className={styles.formGroup}>
                             <label>Items (Comma separated)</label>
@@ -112,7 +124,6 @@ const Editor = ({ resumeData, onChange }) => {
                     </div>
                 ))}
             </div>
-            
         </div>
     );
 };
