@@ -123,9 +123,9 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: #f0f7ff;
+    background: #ffffff;
     color: #0066ff;
-    border: 1px solid #cce4ff;
+    border: 1px solid #dadce0;
     padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
@@ -135,7 +135,8 @@
 }
 
 .addBtn:hover {
-    background: #e0f0ff;
+    background: #f0f7ff;
+    border-color: #cce4ff;
 }
 
 .removeAbsoluteBtn {
@@ -179,20 +180,21 @@
 }
 
 .recommendationBanner {
-    background-color: #f8f9fa;
+    background-color: #f0f7ff;
     padding: 16px;
     border-radius: 8px;
     margin-top: 16px;
     font-size: 0.9rem;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: 1px dashed #dadce0;
+    flex-direction: column;
+    justify-content: flex-start;
+    border: 1px dashed #0066ff;
 }
 
 .recText {
-    color: #4a4a4a;
+    color: #1a1a1a;
     line-height: 1.4;
+    margin-bottom: 12px;
 }
 
 .actionBtn {
@@ -206,6 +208,7 @@
     font-weight: 600;
     transition: background 0.2s;
     white-space: nowrap;
+    align-self: flex-start;
 }
 
 .actionBtn:hover {
@@ -225,17 +228,6 @@
 
     .gridArray .formGroup:nth-child(2) {
         grid-column: 1 / -1;
-    }
-
-    .recommendationBanner {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
-
-    .actionBtn {
-        width: 100%;
-        text-align: center;
     }
 
     .itemCard {

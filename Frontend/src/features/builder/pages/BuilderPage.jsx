@@ -9,7 +9,7 @@ import styles from "../styles/BuilderPage.module.css";
 import { downloadPDF } from "../utils/pdfExport";
 import { downloadDOCX } from "../utils/docxExport";
 import { normalizeResumeData } from "../../../utils/resumeNormalizer";
-import { Download, Save, LayoutTemplate, ArrowLeft } from 'lucide-react';
+import { Download, Save, LayoutTemplate, ArrowLeft, FileText, FileDown } from 'lucide-react';
 
 const BuilderPage = () => {
     const { id } = useParams();
@@ -27,7 +27,7 @@ const BuilderPage = () => {
     const [exporting, setExporting] = useState(false);
     const dropdownRef = useRef(null);
 
-    const [step, setStep] = useState("select-template");
+    // Mobile Navigation State
     const [activeTab, setActiveTab] = useState("editor");
 
     useEffect(() => {
@@ -41,7 +41,7 @@ const BuilderPage = () => {
                 setResumeData(normalizeResumeData(data.resume.content));
                 if (data.resume.templateId) setTemplateId(data.resume.templateId);
             } catch (err) {
-                setError("Failed to load or generate the resume.");
+                setError("Failed to load or generate the resume. Please ensure the document is a valid resume.");
             } finally {
                 setLoading(false);
             }
@@ -105,65 +105,62 @@ const BuilderPage = () => {
     if (error) return <div className={styles.errorBox}>{error}</div>;
     if (loading) return <div className={styles.loadingBox}><p>✨ Preparing your professional workspace...</p></div>;
 
-    if (step === "select-template") {
-        return (
-            <div className={styles.container}>
-                <div className={styles.header}>
-                    <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16}/> Dashboard</Link>
-                </div>
-                <div className={styles.templateSelection}>
-                    <h2>Choose Your Resume Layout</h2>
-                    <div className={styles.templateGrid}>
-                        {['classic', 'modern', 'minimal'].map(t => (
-                            <div key={t} className={styles.templateCard} onClick={() => { setTemplateId(t); setIsDirty(true); setStep("workspace"); }}>
-                                <h3 style={{textTransform: 'capitalize'}}>{t}</h3>
-                                <p>ATS-friendly professional layout.</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div className={styles.container}>
+            {/* Desktop Toolbar */}
             <div className={styles.header}>
                 <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16}/> Dashboard</Link>
+                
+                <div className={styles.templateSelector}>
+                    <LayoutTemplate size={16} className={styles.iconMuted} />
+                    <select value={templateId} onChange={(e) => { setTemplateId(e.target.value); setIsDirty(true); }} className={styles.select}>
+                        <option value="classic">Classic</option>
+                        <option value="modern">Modern</option>
+                        <option value="minimal">Minimal</option>
+                    </select>
+                </div>
+
                 <div className={styles.headerActions}>
-                    <button className={styles.secondaryBtn} onClick={() => setStep("select-template")}>
-                        <LayoutTemplate size={16}/> Layout
-                    </button>
                     <span className={styles.statusText}>{isDirty ? "Unsaved" : "Saved"}</span>
                     
+                    <button className={styles.primaryBtnOutline} onClick={handleSave} disabled={!isDirty || saving}>
+                        <Save size={16}/> {saving ? "Saving..." : "Save"}
+                    </button>
+
                     <div className={styles.downloadDropdown} ref={dropdownRef}>
                         <button className={styles.primaryBtn} onClick={() => setIsDownloadOpen(!isDownloadOpen)} disabled={exporting}>
-                            <Download size={16}/> {exporting ? "Generating..." : "Download"}
+                            <Download size={16}/> {exporting ? "Generating..." : "Download ▼"}
                         </button>
                         {isDownloadOpen && (
                             <div className={styles.dropdownMenu}>
-                                <button className={styles.dropdownItem} onClick={handleDownloadPDF}>Download PDF</button>
-                                <button className={styles.dropdownItem} onClick={handleDownloadDOCX}>Download DOCX</button>
+                                <button className={styles.dropdownItem} onClick={handleDownloadPDF}><FileText size={16}/> Download PDF</button>
+                                <button className={styles.dropdownItem} onClick={handleDownloadDOCX}><FileDown size={16}/> Download DOCX</button>
                             </div>
                         )}
                     </div>
-                    
-                    <button className={styles.primaryBtn} onClick={handleSave} disabled={!isDirty || saving}>
-                        <Save size={16}/> {saving ? "Saving..." : "Save"}
-                    </button>
                 </div>
             </div>
             
+            {/* Mobile Tab Navigation */}
             <div className={styles.mobileTabs}>
-                <button className={`${styles.tabBtn} ${activeTab === 'editor' ? styles.activeTab : ''}`} onClick={() => setActiveTab('editor')}>✎ Edit Resume</button>
+                <button className={`${styles.tabBtn} ${activeTab === 'editor' ? styles.activeTab : ''}`} onClick={() => setActiveTab('editor')}>✎ Editor</button>
                 <button className={`${styles.tabBtn} ${activeTab === 'preview' ? styles.activeTab : ''}`} onClick={() => setActiveTab('preview')}>👁 Preview</button>
+                <button className={`${styles.tabBtn} ${activeTab === 'feedback' ? styles.activeTab : ''}`} onClick={() => setActiveTab('feedback')}>✨ Feedback</button>
             </div>
 
+            {/* Split Workspace */}
             <div className={styles.workspace}>
+                {/* Editor Panel (Hidden on mobile if not active) */}
                 <div className={`${styles.editorPane} ${activeTab === 'editor' ? styles.paneActive : ''}`}>
-                    <FeedbackPanel analysisResults={analysisData} />
                     <Editor resumeData={resumeData} onChange={updateResumeData} analysisResults={analysisData} />
                 </div>
+                
+                {/* Feedback Panel (Desktop sits above preview, Mobile has its own tab) */}
+                <div className={`${styles.feedbackPane} ${activeTab === 'feedback' ? styles.paneActive : ''}`}>
+                   <FeedbackPanel analysisResults={analysisData} />
+                </div>
+
+                {/* Preview Panel (Hidden on mobile if not active) */}
                 <div className={`${styles.previewPane} ${activeTab === 'preview' ? styles.paneActive : ''}`}>
                     <Preview resumeData={resumeData} templateId={templateId} />
                 </div>

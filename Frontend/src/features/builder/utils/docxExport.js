@@ -9,7 +9,7 @@ export const downloadDOCX = async (rawResumeData, templateId) => {
     const isMinimal = config.id === 'minimal';
     const sections = [];
 
-    // Personal Info
+    // Personal Info mapped explicitly referencing the DOCX Baseline
     if (resumeData.personalInfo.fullName) {
         sections.push(new Paragraph({
             children: [new TextRun({ text: config.uppercaseHeaders ? resumeData.personalInfo.fullName.toUpperCase() : resumeData.personalInfo.fullName, size: isMinimal ? 22 : 28, bold: !isMinimal, color: config.primaryColor })],
@@ -85,7 +85,10 @@ export const downloadDOCX = async (rawResumeData, templateId) => {
             
             const linkRuns = [];
             if (validateAndFormatURL(proj.githubUrl)) linkRuns.push(new ExternalHyperlink({ children: [new TextRun({ text: "GitHub", style: "Hyperlink", size: 20 })], link: validateAndFormatURL(proj.githubUrl) }));
-            if (validateAndFormatURL(proj.liveUrl)) linkRuns.push(new ExternalHyperlink({ children: [new TextRun({ text: "Live Demo", style: "Hyperlink", size: 20 })], link: validateAndFormatURL(proj.liveUrl) }));
+            if (validateAndFormatURL(proj.liveUrl)) {
+                 if (linkRuns.length > 0) linkRuns.push(new TextRun({ text: " | ", style: "normalText" }));
+                 linkRuns.push(new ExternalHyperlink({ children: [new TextRun({ text: "Live Demo", style: "Hyperlink", size: 20 })], link: validateAndFormatURL(proj.liveUrl) }));
+            }
             
             if (proj.description || linkRuns.length > 0) {
                  sections.push(new Paragraph({ children: [new TextRun({ text: (proj.description ? proj.description + " " : ""), style: "normalText" }), ...linkRuns], spacing: { after: 100 } }));
@@ -127,6 +130,26 @@ export const downloadDOCX = async (rawResumeData, templateId) => {
                 ],
                 spacing: { after: 50 }
             }));
+        });
+    }
+    
+    if (resumeData.certifications.length > 0) {
+        sections.push(new Paragraph({ text: "CERTIFICATIONS", heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
+        resumeData.certifications.forEach(cert => {
+            sections.push(new Paragraph({
+                children: [
+                    new TextRun({ text: cert.name, bold: true, color: config.primaryColor }),
+                    new TextRun({ text: (cert.issuer ? ` - ${cert.issuer}` : '') + (cert.date ? ` (${cert.date})` : ''), style: "normalText" })
+                ],
+                spacing: { after: 50 }
+            }));
+        });
+    }
+    
+    if (resumeData.achievements.length > 0) {
+        sections.push(new Paragraph({ text: "ACHIEVEMENTS", heading: HeadingLevel.HEADING_2, spacing: { before: 200, after: 100 } }));
+        resumeData.achievements.forEach(ach => {
+            sections.push(new Paragraph({ text: ach, bullet: { level: 0 }, style: "normalText" }));
         });
     }
 

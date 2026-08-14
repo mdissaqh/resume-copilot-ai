@@ -1,6 +1,5 @@
 export const normalizeResumeData = (data) => {
     if (!data) return {};
-    
     return {
         personalInfo: {
             fullName: data.personalInfo?.fullName || '',

@@ -1,5 +1,4 @@
-import React from 'react';
-import { AlertTriangle, Info } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import styles from './FeedbackPanel.module.css';
 
 const FeedbackPanel = ({ analysisResults }) => {
@@ -9,11 +8,10 @@ const FeedbackPanel = ({ analysisResults }) => {
 
     return (
         <div className={styles.panelContainer}>
-            <h3 className={styles.panelTitle}>✨ ATS Optimization Feedback</h3>
+            <h3 className={styles.panelTitle}>✨ Job Description Match Feedback</h3>
             <div className={styles.feedbackSection}>
                 <h4 className={styles.warningHeading}>
-                    <AlertTriangle size={18} className={styles.icon} /> 
-                    Skills to Develop (JD Gaps)
+                    <AlertTriangle size={18} /> Skills to Develop
                 </h4>
                 <p className={styles.helperText}>
                     These skills are required by the Job Description but were not found in your resume. They were NOT added automatically to maintain honesty.

@@ -11,17 +11,17 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 24px;
+    padding: 12px 24px;
     background-color: #ffffff;
     border-bottom: 1px solid #eaeaea;
-    flex-wrap: wrap;
-    gap: 12px;
+    z-index: 20;
 }
 
 .backLink {
     display: inline-flex;
     align-items: center;
-    padding: 8px 16px;
+    gap: 6px;
+    padding: 8px 12px;
     background-color: #ffffff;
     color: #4a4a4a;
     text-decoration: none;
@@ -29,68 +29,97 @@
     border-radius: 6px;
     border: 1px solid #dadce0;
     transition: all 0.2s;
-    font-size: 0.95rem;
-    white-space: nowrap;
+    font-size: 0.9rem;
 }
 
 .backLink:hover {
     background-color: #f8f9fa;
     color: #1a1a1a;
-    border-color: #d2d2d2;
+    border-color: #cdd1d5;
+}
+
+.templateSelector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8f9fa;
+    border: 1px solid #dadce0;
+    padding: 6px 12px;
+    border-radius: 6px;
+}
+
+.iconMuted {
+    color: #5f6368;
+}
+
+.select {
+    background: none;
+    border: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1a1a1a;
+    cursor: pointer;
+    outline: none;
 }
 
 .headerActions {
     display: flex;
     gap: 12px;
     align-items: center;
-    flex-wrap: wrap;
 }
 
-.saveButton {
+.statusText {
+    font-size: 0.85rem;
+    color: #70757a;
+    font-weight: 500;
+}
+
+.primaryBtnOutline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #ffffff;
+    color: #0066ff;
+    border: 1px solid #0066ff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.primaryBtnOutline:hover:not(:disabled) {
+    background-color: #f0f7ff;
+}
+
+.primaryBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background-color: #0066ff;
     color: white;
     border: none;
     padding: 8px 16px;
     border-radius: 6px;
     font-weight: 600;
+    font-size: 0.9rem;
     cursor: pointer;
-    transition: background-color 0.2s;
-    white-space: nowrap;
+    transition: all 0.2s;
 }
 
-.saveButton:hover:not(:disabled) {
+.primaryBtn:hover:not(:disabled) {
     background-color: #0052cc;
 }
 
-.saveButton:disabled {
-    opacity: 0.7;
+.primaryBtn:disabled,
+.primaryBtnOutline:disabled {
+    opacity: 0.6;
     cursor: not-allowed;
 }
 
 .downloadDropdown {
     position: relative;
-    display: inline-block;
-}
-
-.downloadToggle {
-    background-color: #10b981;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background-color 0.2s;
-}
-
-.downloadToggle:hover:not(:disabled) {
-    background-color: #059669;
-}
-
-.downloadToggle:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
 }
 
 .dropdownMenu {
@@ -104,12 +133,15 @@
     display: flex;
     flex-direction: column;
     z-index: 100;
-    min-width: 140px;
+    min-width: 180px;
     overflow: hidden;
 }
 
 .dropdownItem {
-    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
     border: none;
     background: none;
     text-align: left;
@@ -121,13 +153,7 @@
 }
 
 .dropdownItem:hover {
-    background-color: #f3f4f6;
-}
-
-.statusText {
-    font-size: 0.9rem;
-    color: #70757a;
-    white-space: nowrap;
+    background-color: #f8f9fa;
 }
 
 .mobileTabs {
@@ -143,7 +169,8 @@
 }
 
 .editorPane {
-    flex: 1;
+    flex: 0 0 45%;
+    max-width: 800px;
     overflow-y: auto;
     padding: 24px;
     border-right: 1px solid #eaeaea;
@@ -153,10 +180,16 @@
 .previewPane {
     flex: 1;
     background-color: #e5e7eb;
-    position: relative;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
+
+.feedbackPane {
+    display: none;
+}
+
+/* Desktop feedback is rendered inline inside the Editor via composition, but handled via tabs on mobile */
 
 .loadingBox,
 .errorBox {
@@ -164,57 +197,41 @@
     padding: 60px;
     margin: 40px auto;
     max-width: 600px;
+    font-weight: 500;
 }
 
-.templateSelection {
-    padding: 40px 20px;
-    max-width: 1000px;
-    margin: 0 auto;
-    text-align: center;
-    overflow-y: auto;
-    height: 100%;
-}
-
-.templateGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 24px;
-    margin-top: 32px;
-}
-
-.templateCard {
-    background: white;
-    border: 2px solid #eaeaea;
-    border-radius: 12px;
-    padding: 24px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.templateCard:hover {
-    border-color: #0066ff;
-    box-shadow: 0 8px 24px rgba(0, 102, 255, 0.15);
-}
-
-.templateCard h3 {
-    margin-bottom: 8px;
-    color: #1a1a1a;
-}
-
-.templateCard p {
-    color: #70757a;
-    font-size: 0.9rem;
+.errorBox {
+    color: #d93025;
+    background: #fdf3f2;
+    border-radius: 8px;
+    border: 1px solid #f9d2ce;
 }
 
 @media (max-width: 1024px) {
+    .header {
+        flex-wrap: wrap;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .templateSelector {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .headerActions {
+        flex: 1;
+        justify-content: flex-end;
+    }
+
     .mobileTabs {
         display: flex;
         background-color: #ffffff;
-        padding: 12px 16px;
-        gap: 12px;
+        padding: 8px;
+        gap: 8px;
         border-bottom: 1px solid #eaeaea;
         z-index: 10;
-        overflow-x: auto;
     }
 
     .tabBtn {
@@ -226,8 +243,7 @@
         font-weight: 600;
         color: #4a4a4a;
         cursor: pointer;
-        transition: all 0.2s;
-        white-space: nowrap;
+        font-size: 0.9rem;
     }
 
     .activeTab {
@@ -241,13 +257,34 @@
         display: none;
     }
 
+    .feedbackPane {
+        display: none;
+        overflow-y: auto;
+        padding: 16px;
+        background: #fff;
+    }
+
     .paneActive {
         display: flex;
         flex: 1;
         width: 100%;
+        flex-direction: column;
     }
 
-    .headerActions {
-        justify-content: flex-end;
+    .editorPane.paneActive {
+        max-width: 100%;
+        padding: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+
+    .primaryBtn span,
+    .primaryBtnOutline span {
+        display: none;
+    }
+
+    .statusText {
+        display: none;
     }
 }

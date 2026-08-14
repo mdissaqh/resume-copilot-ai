@@ -13,6 +13,8 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
 
         if (jobDescription) {
             prompt += `Compare against this Job Description: "${jobDescription}". Identify critical missing skills. Do NOT hallucinate skills. `;
+        } else {
+            prompt += `Provide a General ATS Optimization analysis. Evaluate completeness, keyword density, and formatting. `;
         }
         
         prompt += `
@@ -33,10 +35,17 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
             "strengths": ["Array of strong points"],
             "weaknesses": ["Array of areas needing improvement"],
             "jdGaps": [
-                { "skill": "String", "importance": "high|medium|low", "reason": "String", "recommendation": "String" }
+                { "skill": "String", "reason": "String explaining why this JD requirement is missing from the resume.", "recommendation": "Actionable advice" }
             ],
             "editorRecommendations": [
-                { "section": "personalInfo|projects|experience", "field": "String (e.g., 'linkedin', 'githubUrl', 'portfolio')", "type": "url|text", "label": "String", "reason": "String", "userInputRequired": true }
+                { 
+                  "section": "projects|personalInfo|experience", 
+                  "fieldTarget": "String (e.g., 'personalInfo.links', 'projects[0].githubUrl')", 
+                  "type": "url|text", 
+                  "label": "String", 
+                  "reason": "String",
+                  "action": "ADD_INPUT"
+                }
             ]
         }`;
 
@@ -71,9 +80,9 @@ export const generateStructuredResume = async (resumeText, jobDescription) => {
 
         Return JSON matching this exact structure:
         {
-          "personalInfo": { "fullName": "String", "email": "String", "phone": "String", "location": "String", "links": [{ "platform": "String (e.g., LinkedIn, GitHub, Portfolio)", "url": "String" }] },
+          "personalInfo": { "fullName": "String", "email": "String", "phone": "String", "location": "String", "links": [{ "platform": "String (e.g., LinkedIn, GitHub)", "url": "String" }] },
           "professionalSummary": "String",
-          "experience": [ { "organization": "String", "role": "String", "location": "String", "startDate": "String", "endDate": "String", "description": "String", "achievements": ["String (Include quantified metrics)"] } ],
+          "experience": [ { "organization": "String", "role": "String", "location": "String", "startDate": "String", "endDate": "String", "description": "String", "achievements": ["String"] } ],
           "projects": [ { "title": "String", "technologies": ["String"], "date": "String", "liveUrl": "String", "githubUrl": "String", "description": "String", "highlights": ["String"] } ],
           "education": [ { "institution": "String", "degree": "String", "fieldOfStudy": "String", "location": "String", "startDate": "String", "endDate": "String" } ],
           "skills": [ { "category": "String", "items": ["String"] } ],

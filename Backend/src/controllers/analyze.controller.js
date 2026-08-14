@@ -20,7 +20,7 @@ export const analyzeResume = async (req, res) => {
         }
 
         if (parsedText.length > MAX_TEXT_LENGTH) {
-            return res.status(400).json({ message: `Document is unusually large (${parsedText.length} chars). Please upload a standard resume under 15,000 characters to ensure optimal AI processing.` });
+            return res.status(400).json({ message: `Document is unusually large (${parsedText.length} chars). Please upload a standard resume under 15,000 characters.` });
         }
 
         const aiAnalysisResult = await generateResumeAnalysis(parsedText, jobDescription);

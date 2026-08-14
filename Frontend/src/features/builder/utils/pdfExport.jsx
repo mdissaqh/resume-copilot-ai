@@ -1,15 +1,16 @@
+import React from 'react';
 import { pdf, Document, Page, Text, View, Link, StyleSheet } from '@react-pdf/renderer';
 import { validateAndFormatURL } from '../../../utils/urlValidator';
 import { normalizeResumeData } from '../../../utils/resumeNormalizer';
 import { templateConfig } from '../../../utils/templateConfig';
 
-// Dynamic StyleSheet Generator mirroring TemplateConfig constraints
+// Dynamic StyleSheet Generator mirroring TemplateConfig constraints for absolute WYSIWYG
 const getStyles = (config) => StyleSheet.create({
     page: { padding: 40, fontFamily: config.fontFamily, fontSize: 10, color: config.primaryColor, lineHeight: 1.4 },
     section: { marginBottom: config.id === 'minimal' ? 20 : 15 },
     name: { 
         fontFamily: config.fontFamily === 'Helvetica' ? 'Helvetica-Bold' : 'Times-Bold', 
-        fontSize: config.id === 'minimal' ? 22 : 24, 
+        fontSize: config.headingSize, 
         textAlign: config.headerAlign, 
         marginBottom: 6, 
         textTransform: config.uppercaseHeaders ? 'uppercase' : 'none',
@@ -57,131 +58,158 @@ const ContactSection = ({ personalInfo, styles, config }) => {
             {personalInfo.links && personalInfo.links.map((link, i) => {
                 const validUrl = validateAndFormatURL(link.url);
                 return validUrl ? (
-                    <Text key={`link-${i}`} style={styles.contactItem}>
+                    <View key={`link-${i}`} style={{ display: 'flex', flexDirection: 'row' }}>
                         <Link src={validUrl} style={styles.linkItem}>{link.platform}</Link>
-                        {i < personalInfo.links.length - 1 ? ` ${separator} ` : ''}
-                    </Text>
+                        {i < personalInfo.links.length - 1 ? <Text style={styles.contactItem}>{` ${separator} `}</Text> : null}
+                    </View>
                 ) : null;
             })}
         </View>
     );
 };
 
-const UniversalPDF = ({ data, config }) => {
+// This master document component is exported for use by BOTH the PDF downloader AND the live Preview viewer.
+export const ResumeDocument = ({ data, config }) => {
     const styles = getStyles(config);
     const isMinimal = config.id === 'minimal';
 
     return (
-        <Page size="A4" style={styles.page}>
-            <Text style={styles.name}>{data.personalInfo.fullName}</Text>
-            <ContactSection personalInfo={data.personalInfo} styles={styles} config={config} />
+        <Document>
+            <Page size="A4" style={styles.page}>
+                <Text style={styles.name}>{data.personalInfo.fullName}</Text>
+                <ContactSection personalInfo={data.personalInfo} styles={styles} config={config} />
 
-            {data.professionalSummary && (
-                <View style={styles.section} wrap={false}>
-                    <Text style={styles.sectionTitle}>{isMinimal ? "ABOUT" : "Professional Summary"}</Text>
-                    <Text>{data.professionalSummary}</Text>
-                </View>
-            )}
+                {data.professionalSummary && (
+                    <View style={styles.section} wrap={false}>
+                        <Text style={styles.sectionTitle}>{isMinimal ? "ABOUT" : "Professional Summary"}</Text>
+                        <Text>{data.professionalSummary}</Text>
+                    </View>
+                )}
 
-            {data.experience.length > 0 && (
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Experience</Text>
-                    {data.experience.map((exp, i) => (
-                        <View key={i} style={isMinimal ? styles.flexRow : { marginBottom: 10 }} wrap={false}>
-                            {isMinimal && (
-                                <View style={styles.leftCol}>
-                                    <Text>{exp.startDate}</Text><Text>{exp.endDate}</Text>
-                                </View>
-                            )}
-                            <View style={isMinimal ? styles.rightCol : {}}>
-                                <View style={isMinimal ? {} : styles.rowBetween}>
-                                    <Text style={styles.bold}>{exp.role}</Text>
-                                    {!isMinimal && <Text style={styles.bold}>{exp.startDate} - {exp.endDate}</Text>}
-                                </View>
-                                <View style={isMinimal ? { marginBottom: 4 } : styles.rowBetween}>
-                                    <Text style={styles.italic}>{exp.organization}</Text>
-                                    {!isMinimal && <Text style={styles.italic}>{exp.location}</Text>}
-                                </View>
-                                {exp.achievements?.map((ach, j) => (
-                                    <View key={j} style={styles.bulletRow}>
-                                        <Text style={styles.bulletPoint}>{isMinimal ? '-' : '•'}</Text>
-                                        <Text style={styles.bulletText}>{ach}</Text>
+                {data.experience.length > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Experience</Text>
+                        {data.experience.map((exp, i) => (
+                            <View key={i} style={isMinimal ? styles.flexRow : { marginBottom: 10 }} wrap={false}>
+                                {isMinimal && (
+                                    <View style={styles.leftCol}>
+                                        <Text>{exp.startDate}</Text><Text>{exp.endDate}</Text>
                                     </View>
-                                ))}
-                            </View>
-                        </View>
-                    ))}
-                </View>
-            )}
-
-            {data.projects.length > 0 && (
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Projects</Text>
-                    {data.projects.map((proj, i) => (
-                        <View key={i} style={isMinimal ? styles.flexRow : { marginBottom: 10 }} wrap={false}>
-                            {isMinimal && (
-                                <View style={styles.leftCol}><Text>{proj.date}</Text></View>
-                            )}
-                            <View style={isMinimal ? styles.rightCol : {}}>
-                                <View style={isMinimal ? {} : styles.rowBetween}>
-                                    <Text style={styles.bold}>{proj.title}</Text>
-                                    {!isMinimal && <Text style={styles.bold}>{proj.date}</Text>}
-                                </View>
-                                <View style={isMinimal ? { marginBottom: 4 } : styles.rowBetween}>
-                                    <Text style={styles.italic}>{proj.description}</Text>
-                                    <View style={{ display: 'flex', flexDirection: 'row' }}>
-                                        {validateAndFormatURL(proj.githubUrl) && <Link src={validateAndFormatURL(proj.githubUrl)} style={styles.linkItem}>GitHub</Link>}
-                                        {validateAndFormatURL(proj.githubUrl) && validateAndFormatURL(proj.liveUrl) && <Text style={styles.contactItem}> | </Text>}
-                                        {validateAndFormatURL(proj.liveUrl) && <Link src={validateAndFormatURL(proj.liveUrl)} style={styles.linkItem}>Live Demo</Link>}
+                                )}
+                                <View style={isMinimal ? styles.rightCol : {}}>
+                                    <View style={isMinimal ? {} : styles.rowBetween}>
+                                        <Text style={styles.bold}>{exp.role}</Text>
+                                        {!isMinimal && <Text style={styles.bold}>{exp.startDate} - {exp.endDate}</Text>}
                                     </View>
-                                </View>
-                                {proj.highlights?.map((ach, j) => (
-                                    <View key={j} style={styles.bulletRow}>
-                                        <Text style={styles.bulletPoint}>{isMinimal ? '-' : '•'}</Text>
-                                        <Text style={styles.bulletText}>{ach}</Text>
+                                    <View style={isMinimal ? { marginBottom: 4 } : styles.rowBetween}>
+                                        <Text style={styles.italic}>{exp.organization}</Text>
+                                        {!isMinimal && <Text style={styles.italic}>{exp.location}</Text>}
                                     </View>
-                                ))}
-                            </View>
-                        </View>
-                    ))}
-                </View>
-            )}
-
-            {data.education.length > 0 && (
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Education</Text>
-                    {data.education.map((edu, i) => (
-                        <View key={i} style={isMinimal ? styles.flexRow : { marginBottom: 8 }} wrap={false}>
-                             {isMinimal && (
-                                <View style={styles.leftCol}><Text>{edu.startDate}</Text><Text>{edu.endDate}</Text></View>
-                            )}
-                            <View style={isMinimal ? styles.rightCol : {}}>
-                                <View style={isMinimal ? {} : styles.rowBetween}>
-                                    <Text style={styles.bold}>{edu.institution}</Text>
-                                    {!isMinimal && <Text style={styles.bold}>{edu.location}</Text>}
-                                </View>
-                                <View style={isMinimal ? {} : styles.rowBetween}>
-                                    <Text>{edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}</Text>
-                                    {!isMinimal && <Text>{edu.startDate} - {edu.endDate}</Text>}
+                                    {exp.achievements?.map((ach, j) => (
+                                        <View key={j} style={styles.bulletRow}>
+                                            <Text style={styles.bulletPoint}>{isMinimal ? '-' : '•'}</Text>
+                                            <Text style={styles.bulletText}>{ach}</Text>
+                                        </View>
+                                    ))}
                                 </View>
                             </View>
-                        </View>
-                    ))}
-                </View>
-            )}
+                        ))}
+                    </View>
+                )}
 
-            {data.skills.length > 0 && (
-                <View style={styles.section} wrap={false}>
-                    <Text style={styles.sectionTitle}>{isMinimal ? "EXPERTISE" : "Skills"}</Text>
-                    {data.skills.map((skillGroup, i) => (
-                        <Text key={i} style={{ marginBottom: 4 }}>
-                            <Text style={styles.bold}>{skillGroup.category}: </Text>
-                            {skillGroup.items?.join(', ')}
-                        </Text>
-                    ))}
-                </View>
-            )}
-        </Page>
+                {data.projects.length > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Projects</Text>
+                        {data.projects.map((proj, i) => (
+                            <View key={i} style={isMinimal ? styles.flexRow : { marginBottom: 10 }} wrap={false}>
+                                {isMinimal && (
+                                    <View style={styles.leftCol}><Text>{proj.date}</Text></View>
+                                )}
+                                <View style={isMinimal ? styles.rightCol : {}}>
+                                    <View style={isMinimal ? {} : styles.rowBetween}>
+                                        <Text style={styles.bold}>{proj.title}</Text>
+                                        {!isMinimal && <Text style={styles.bold}>{proj.date}</Text>}
+                                    </View>
+                                    <View style={isMinimal ? { marginBottom: 4 } : styles.rowBetween}>
+                                        <Text style={styles.italic}>{proj.description}</Text>
+                                        <View style={{ display: 'flex', flexDirection: 'row' }}>
+                                            {validateAndFormatURL(proj.githubUrl) && <Link src={validateAndFormatURL(proj.githubUrl)} style={styles.linkItem}>GitHub</Link>}
+                                            {validateAndFormatURL(proj.githubUrl) && validateAndFormatURL(proj.liveUrl) && <Text style={styles.contactItem}> | </Text>}
+                                            {validateAndFormatURL(proj.liveUrl) && <Link src={validateAndFormatURL(proj.liveUrl)} style={styles.linkItem}>Live Demo</Link>}
+                                        </View>
+                                    </View>
+                                    {proj.highlights?.map((ach, j) => (
+                                        <View key={j} style={styles.bulletRow}>
+                                            <Text style={styles.bulletPoint}>{isMinimal ? '-' : '•'}</Text>
+                                            <Text style={styles.bulletText}>{ach}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {data.education.length > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Education</Text>
+                        {data.education.map((edu, i) => (
+                            <View key={i} style={isMinimal ? styles.flexRow : { marginBottom: 8 }} wrap={false}>
+                                 {isMinimal && (
+                                    <View style={styles.leftCol}><Text>{edu.startDate}</Text><Text>{edu.endDate}</Text></View>
+                                )}
+                                <View style={isMinimal ? styles.rightCol : {}}>
+                                    <View style={isMinimal ? {} : styles.rowBetween}>
+                                        <Text style={styles.bold}>{edu.institution}</Text>
+                                        {!isMinimal && <Text style={styles.bold}>{edu.location}</Text>}
+                                    </View>
+                                    <View style={isMinimal ? {} : styles.rowBetween}>
+                                        <Text>{edu.degree} {edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ''}</Text>
+                                        {!isMinimal && <Text>{edu.startDate} - {edu.endDate}</Text>}
+                                    </View>
+                                </View>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {data.skills.length > 0 && (
+                    <View style={styles.section} wrap={false}>
+                        <Text style={styles.sectionTitle}>{isMinimal ? "EXPERTISE" : "Skills"}</Text>
+                        {data.skills.map((skillGroup, i) => (
+                            <Text key={i} style={{ marginBottom: 4 }}>
+                                <Text style={styles.bold}>{skillGroup.category}: </Text>
+                                {skillGroup.items?.join(', ')}
+                            </Text>
+                        ))}
+                    </View>
+                )}
+                
+                {data.certifications.length > 0 && (
+                    <View style={styles.section} wrap={false}>
+                        <Text style={styles.sectionTitle}>Certifications</Text>
+                        {data.certifications.map((cert, i) => (
+                            <Text key={i} style={{ marginBottom: 4 }}>
+                                <Text style={styles.bold}>{cert.name}</Text>
+                                {cert.issuer ? ` - ${cert.issuer}` : ''} {cert.date ? ` (${cert.date})` : ''}
+                            </Text>
+                        ))}
+                    </View>
+                )}
+                
+                {data.achievements.length > 0 && (
+                    <View style={styles.section} wrap={false}>
+                        <Text style={styles.sectionTitle}>Achievements</Text>
+                        {data.achievements.map((ach, i) => (
+                            <View key={i} style={styles.bulletRow}>
+                                <Text style={styles.bulletPoint}>{isMinimal ? '-' : '•'}</Text>
+                                <Text style={styles.bulletText}>{ach}</Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
+            </Page>
+        </Document>
     );
 };
 
@@ -189,7 +217,7 @@ export const downloadPDF = async (rawResumeData, templateId) => {
     try {
         const normalizedData = normalizeResumeData(rawResumeData);
         const config = templateConfig[templateId] || templateConfig.classic;
-        const blob = await pdf(<Document><UniversalPDF data={normalizedData} config={config} /></Document>).toBlob();
+        const blob = await pdf(<ResumeDocument data={normalizedData} config={config} />).toBlob();
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Plus, Link as LinkIcon, Briefcase, GraduationCap, Code, FolderGit2 } from 'lucide-react';
+import { Trash2, Plus, Link as LinkIcon, Briefcase, GraduationCap, Code, FolderGit2, Award, Zap } from 'lucide-react';
 import { normalizeResumeData } from '../../../../utils/resumeNormalizer';
 import styles from '../../styles/Editor.module.css';
 
@@ -20,7 +20,8 @@ const Editor = ({ resumeData, onChange, analysisResults }) => {
         current[path[path.length - 1]] = value;
         setLocalData(newData);
         
-        const handler = setTimeout(() => { onChange(path, value); }, 300);
+        // Debounce update to prevent heavy PDF regeneration on every keystroke
+        const handler = setTimeout(() => { onChange(path, value); }, 500);
         return () => clearTimeout(handler);
     };
 
@@ -46,7 +47,7 @@ const Editor = ({ resumeData, onChange, analysisResults }) => {
         }
     };
 
-    // Extract dynamic AI recommendations
+    // Safely extract AI editor recommendations
     const recommendations = Array.isArray(analysisResults?.editorRecommendations) ? analysisResults.editorRecommendations : [];
 
     return (
@@ -74,11 +75,11 @@ const Editor = ({ resumeData, onChange, analysisResults }) => {
                     </div>
                 ))}
                 
-                {/* Dynamic AI Recommendation Injection for Personal Info */}
-                {recommendations.filter(r => r.section === 'personalInfo').map((rec, idx) => (
-                    <div key={idx} className={styles.recommendationBanner}>
-                        <div className={styles.recText}><strong>💡 AI Suggests:</strong> Add {rec.label} ({rec.reason})</div>
-                        <button className={styles.actionBtn} onClick={() => addArrayItem('personalInfo.links', { platform: rec.label, url: '' })}>+ Add Field</button>
+                {/* Dynamic AI UI: Personal Info Recommendations */}
+                {recommendations.filter(r => r.section === 'personalInfo' && r.action === 'ADD_INPUT').map((rec, idx) => (
+                    <div key={`rec-pi-${idx}`} className={styles.recommendationBanner}>
+                        <div className={styles.recText}><strong>💡 General ATS Advice:</strong> {rec.reason}</div>
+                        <button className={styles.actionBtn} onClick={() => addArrayItem('personalInfo.links', { platform: rec.label, url: '' })}>+ Add {rec.label}</button>
                     </div>
                 ))}
             </div>
@@ -114,38 +115,49 @@ const Editor = ({ resumeData, onChange, analysisResults }) => {
                 ))}
             </div>
 
-            {/* Projects (First-Class Data Citizen) */}
+            {/* Projects */}
             <div className={styles.sectionCard}>
                 <div className={styles.sectionHeaderFlex}>
                     <h3 className={styles.sectionTitle} style={{ margin: 0 }}><FolderGit2 size={20} /> Projects</h3>
                     <button className={styles.addBtn} onClick={() => addArrayItem('projects', { title: '', date: '', description: '', githubUrl: '', liveUrl: '', highlights: [] })}><Plus size={16} /> Add Project</button>
                 </div>
-                {localData.projects.map((proj, index) => (
-                    <div key={index} className={styles.itemCard}>
-                        <button className={styles.removeAbsoluteBtn} onClick={() => removeArrayItem('projects', index)} title="Remove Project"><Trash2 size={18} /></button>
-                        <div className={styles.grid}>
-                            <div className={styles.formGroup}><label>Project Title</label><input className={styles.input} value={proj.title || ''} onChange={(e) => handleTextChange(['projects', index, 'title'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>Date (Optional)</label><input className={styles.input} value={proj.date || ''} onChange={(e) => handleTextChange(['projects', index, 'date'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>GitHub URL</label><input className={styles.input} value={proj.githubUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'githubUrl'], e.target.value)} placeholder="https://..." /></div>
-                            <div className={styles.formGroup}><label>Live URL</label><input className={styles.input} value={proj.liveUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'liveUrl'], e.target.value)} placeholder="https://..." /></div>
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label>Description</label>
-                            <textarea className={styles.textarea} style={{ minHeight: '60px' }} value={proj.description || ''} onChange={(e) => handleTextChange(['projects', index, 'description'], e.target.value)} />
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label>Highlights / Technical Details (One per line)</label>
-                            <textarea className={styles.textarea} value={proj.highlights?.join('\n') || ''} onChange={(e) => handleArrayTextChange(['projects', index, 'highlights'], e.target.value)} />
-                        </div>
-                        
-                        {/* Dynamic AI Recommendation Injection for specific projects */}
-                        {recommendations.filter(r => r.section === 'projects' && (r.field === 'githubUrl' || r.field === 'liveUrl') && !proj[r.field]).map((rec, idx) => (
-                            <div key={idx} className={styles.recommendationBanner}>
-                                <div className={styles.recText}><strong>💡 Technical Optimization:</strong> Consider adding a {rec.label} to this project to provide verifiable evidence.</div>
+                {localData.projects.map((proj, index) => {
+                    // Check if AI specifically targets this project index for an addition
+                    const projRecs = recommendations.filter(r => r.section === 'projects' && r.fieldTarget === `projects[${index}].${r.field}`);
+                    
+                    return (
+                        <div key={index} className={styles.itemCard}>
+                            <button className={styles.removeAbsoluteBtn} onClick={() => removeArrayItem('projects', index)} title="Remove Project"><Trash2 size={18} /></button>
+                            <div className={styles.grid}>
+                                <div className={styles.formGroup}><label>Project Title</label><input className={styles.input} value={proj.title || ''} onChange={(e) => handleTextChange(['projects', index, 'title'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Date (Optional)</label><input className={styles.input} value={proj.date || ''} onChange={(e) => handleTextChange(['projects', index, 'date'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>GitHub URL</label><input className={styles.input} value={proj.githubUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'githubUrl'], e.target.value)} placeholder="https://..." /></div>
+                                <div className={styles.formGroup}><label>Live URL</label><input className={styles.input} value={proj.liveUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'liveUrl'], e.target.value)} placeholder="https://..." /></div>
                             </div>
-                        ))}
-                    </div>
-                ))}
+                            <div className={styles.formGroup}>
+                                <label>Description</label>
+                                <textarea className={styles.textarea} style={{ minHeight: '60px' }} value={proj.description || ''} onChange={(e) => handleTextChange(['projects', index, 'description'], e.target.value)} />
+                            </div>
+                            <div className={styles.formGroup}>
+                                <label>Highlights / Technical Details (One per line)</label>
+                                <textarea className={styles.textarea} value={proj.highlights?.join('\n') || ''} onChange={(e) => handleArrayTextChange(['projects', index, 'highlights'], e.target.value)} />
+                            </div>
+                            
+                            {/* Dynamic AI UI: Project Specific Inputs */}
+                            {projRecs.map((rec, rIdx) => (
+                                <div key={rIdx} className={styles.recommendationBanner}>
+                                    <div className={styles.recText}><strong>💡 General ATS Advice:</strong> {rec.reason}</div>
+                                    {!proj[rec.field] && (
+                                        <div className={styles.formGroup} style={{marginBottom: 0, marginTop: '10px'}}>
+                                            <label>{rec.label}</label>
+                                            <input className={styles.input} placeholder={rec.suggestedValue || "https://..."} onChange={(e) => handleTextChange(['projects', index, rec.field], e.target.value)} />
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Education */}
@@ -183,6 +195,38 @@ const Editor = ({ resumeData, onChange, analysisResults }) => {
                             <label>Items (Comma separated)</label>
                             <input className={styles.input} value={skill.items?.join(', ') || ''} onChange={(e) => handleTextChange(['skills', index, 'items'], e.target.value.split(',').map(s=>s.trim()))} />
                         </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Certifications */}
+            <div className={styles.sectionCard}>
+                <div className={styles.sectionHeaderFlex}>
+                    <h3 className={styles.sectionTitle} style={{ margin: 0 }}><Award size={20} /> Certifications</h3>
+                    <button className={styles.addBtn} onClick={() => addArrayItem('certifications', { name: '', issuer: '', date: '' })}><Plus size={16} /> Add Cert</button>
+                </div>
+                {localData.certifications.map((cert, index) => (
+                    <div key={index} className={styles.itemCard}>
+                        <button className={styles.removeAbsoluteBtn} onClick={() => removeArrayItem('certifications', index)} title="Remove Certification"><Trash2 size={18} /></button>
+                        <div className={styles.grid}>
+                            <div className={styles.formGroup}><label>Certification Name</label><input className={styles.input} value={cert.name || ''} onChange={(e) => handleTextChange(['certifications', index, 'name'], e.target.value)} /></div>
+                            <div className={styles.formGroup}><label>Issuer</label><input className={styles.input} value={cert.issuer || ''} onChange={(e) => handleTextChange(['certifications', index, 'issuer'], e.target.value)} /></div>
+                            <div className={styles.formGroup}><label>Date</label><input className={styles.input} value={cert.date || ''} onChange={(e) => handleTextChange(['certifications', index, 'date'], e.target.value)} /></div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+            
+            {/* Achievements */}
+            <div className={styles.sectionCard}>
+                <div className={styles.sectionHeaderFlex}>
+                    <h3 className={styles.sectionTitle} style={{ margin: 0 }}><Zap size={20} /> Achievements</h3>
+                    <button className={styles.addBtn} onClick={() => addArrayItem('achievements', '')}><Plus size={16} /> Add Achievement</button>
+                </div>
+                {localData.achievements.map((ach, index) => (
+                    <div key={index} className={styles.gridArray}>
+                        <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}><input className={styles.input} value={ach || ''} onChange={(e) => handleTextChange(['achievements', index], e.target.value)} /></div>
+                        <button className={styles.iconBtnDanger} onClick={() => removeArrayItem('achievements', index)} title="Remove"><Trash2 size={18} /></button>
                     </div>
                 ))}
             </div>
