@@ -6,6 +6,10 @@ const analysisSchema = new mongoose.Schema({
         ref: "User",
         required: true
     },
+    title: {
+        type: String,
+        default: "Untitled Resume Analysis"
+    },
     extractedText: {
         type: String,
         required: true

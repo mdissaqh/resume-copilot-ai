@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { generateResumeApi, saveResumeApi } from "../api/builder.api";
 import Editor from "../components/Editor/Editor";
 import Preview from "../components/Preview/Preview";
 import styles from "../styles/BuilderPage.module.css";
+import { downloadPDF } from "../utils/pdfExport";
+import { downloadDOCX } from "../utils/docxExport";
 
 const BuilderPage = () => {
     const { id } = useParams();
@@ -16,6 +18,10 @@ const BuilderPage = () => {
     const [error, setError] = useState(null);
     const [isDirty, setIsDirty] = useState(false);
     
+    const [isDownloadOpen, setIsDownloadOpen] = useState(false);
+    const [exporting, setExporting] = useState(false);
+    const dropdownRef = useRef(null);
+
     const [step, setStep] = useState("select-template");
     const [activeTab, setActiveTab] = useState("editor");
 
@@ -25,11 +31,8 @@ const BuilderPage = () => {
                 const data = await generateResumeApi(id);
                 setDbResumeId(data.resume._id);
                 setResumeData(data.resume.content);
-                if (data.resume.templateId) {
-                    setTemplateId(data.resume.templateId);
-                }
+                if (data.resume.templateId) setTemplateId(data.resume.templateId);
             } catch (err) {
-                console.error("Generation failed:", err);
                 setError("Failed to load or generate the resume.");
             } finally {
                 setLoading(false);
@@ -37,6 +40,16 @@ const BuilderPage = () => {
         };
         fetchAndGenerate();
     }, [id]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDownloadOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const updateResumeData = useCallback((pathArray, value) => {
         setResumeData(prev => {
@@ -59,17 +72,34 @@ const BuilderPage = () => {
             await saveResumeApi(dbResumeId, resumeData, templateId);
             setIsDirty(false);
         } catch (err) {
-            console.error("Save failed:", err);
             alert("Failed to save changes.");
         } finally {
             setSaving(false);
         }
     };
 
-    const handleSelectTemplate = (selectedId) => {
-        setTemplateId(selectedId);
-        setIsDirty(true);
-        setStep("workspace");
+    const handleDownloadPDF = async () => {
+        setExporting(true);
+        setIsDownloadOpen(false);
+        try {
+            await downloadPDF(resumeData, templateId);
+        } catch (e) {
+            alert("Failed to generate PDF. Please try again.");
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const handleDownloadDOCX = async () => {
+        setExporting(true);
+        setIsDownloadOpen(false);
+        try {
+            await downloadDOCX(resumeData, templateId);
+        } catch (e) {
+            alert("Failed to generate DOCX. Please try again.");
+        } finally {
+            setExporting(false);
+        }
     };
 
     if (error) return <div className={styles.errorBox}>{error}</div>;
@@ -83,20 +113,14 @@ const BuilderPage = () => {
                 </div>
                 <div className={styles.templateSelection}>
                     <h2>Choose Your Resume Layout</h2>
-                    <p style={{ color: '#70757a', marginTop: '10px' }}>Select a starting template. You can customize the content in the next step.</p>
+                    <p style={{ color: '#70757a', marginTop: '10px' }}>Select a starting template.</p>
                     <div className={styles.templateGrid}>
-                        <div className={styles.templateCard} onClick={() => handleSelectTemplate('classic')}>
-                            <h3>Classic</h3>
-                            <p>Traditional, formal structure. Best for law, finance, and academia.</p>
-                        </div>
-                        <div className={styles.templateCard} onClick={() => handleSelectTemplate('modern')}>
-                            <h3>Modern</h3>
-                            <p>Clean lines, distinct headers. Ideal for tech, marketing, and business.</p>
-                        </div>
-                        <div className={styles.templateCard} onClick={() => handleSelectTemplate('minimal')}>
-                            <h3>Minimal</h3>
-                            <p>Highly spacious, elegant design. Great for creative fields and management.</p>
-                        </div>
+                        {['classic', 'modern', 'minimal'].map(t => (
+                            <div key={t} className={styles.templateCard} onClick={() => { setTemplateId(t); setIsDirty(true); setStep("workspace"); }}>
+                                <h3 style={{textTransform: 'capitalize'}}>{t}</h3>
+                                <p>ATS-friendly professional layout.</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -108,31 +132,30 @@ const BuilderPage = () => {
             <div className={styles.header}>
                 <Link to="/dashboard" className={styles.backLink}>&larr; Dashboard</Link>
                 <div className={styles.headerActions}>
-                    <button className={styles.backLink} onClick={() => setStep("select-template")}>
-                        Change Template
-                    </button>
-                    <span className={styles.statusText}>
-                        {isDirty ? "Unsaved changes" : "All changes saved"}
-                    </span>
+                    <button className={styles.backLink} onClick={() => setStep("select-template")}>Layout</button>
+                    <span className={styles.statusText}>{isDirty ? "Unsaved" : "Saved"}</span>
+                    
+                    <div className={styles.downloadDropdown} ref={dropdownRef}>
+                        <button className={styles.downloadToggle} onClick={() => setIsDownloadOpen(!isDownloadOpen)} disabled={exporting}>
+                            {exporting ? "Generating..." : "Download ▼"}
+                        </button>
+                        {isDownloadOpen && (
+                            <div className={styles.dropdownMenu}>
+                                <button className={styles.dropdownItem} onClick={handleDownloadPDF}>Download PDF</button>
+                                <button className={styles.dropdownItem} onClick={handleDownloadDOCX}>Download DOCX</button>
+                            </div>
+                        )}
+                    </div>
+                    
                     <button className={styles.saveButton} onClick={handleSave} disabled={!isDirty || saving}>
-                        {saving ? "Saving..." : "Save All Changes"}
+                        {saving ? "Saving..." : "Save"}
                     </button>
                 </div>
             </div>
             
             <div className={styles.mobileTabs}>
-                <button 
-                    className={`${styles.tabBtn} ${activeTab === 'editor' ? styles.activeTab : ''}`}
-                    onClick={() => setActiveTab('editor')}
-                >
-                    ✎ Edit Resume
-                </button>
-                <button 
-                    className={`${styles.tabBtn} ${activeTab === 'preview' ? styles.activeTab : ''}`}
-                    onClick={() => setActiveTab('preview')}
-                >
-                    👁 Live Preview
-                </button>
+                <button className={`${styles.tabBtn} ${activeTab === 'editor' ? styles.activeTab : ''}`} onClick={() => setActiveTab('editor')}>✎ Edit Resume</button>
+                <button className={`${styles.tabBtn} ${activeTab === 'preview' ? styles.activeTab : ''}`} onClick={() => setActiveTab('preview')}>👁 Preview</button>
             </div>
 
             <div className={styles.workspace}>

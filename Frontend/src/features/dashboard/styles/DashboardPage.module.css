@@ -70,6 +70,10 @@
 .cardTitle {
     margin: 0 0 10px 0;
     color: #1a1a1a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1.25rem;
 }
 
 .cardHeader {

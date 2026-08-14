@@ -16,7 +16,6 @@ const DashboardPage = () => {
                 const data = await getUserAnalysesApi();
                 setAnalyses(data.analyses || []);
             } catch (err) {
-                console.error("Failed to load history", err);
                 setError("Unable to load your analyses. Try again.");
             } finally {
                 setLoading(false);
@@ -31,16 +30,13 @@ const DashboardPage = () => {
             <h2 className={styles.subtitle}>Your Analyses</h2>
 
             {loading && <p>Loading your analyses...</p>}
-            
             {error && <div className={styles.errorBox}>{error}</div>}
 
             {!loading && !error && analyses.length === 0 && (
                 <div className={styles.emptyState}>
                     <p className={styles.emptyText}>You don't have any saved analyses yet.</p>
                     <p className={styles.analyzeText}>Analyze your resume against a job description to get started.</p>
-                    <Link to="/upload" className={styles.analyzeLink}>
-                        Analyze a Resume
-                    </Link>
+                    <Link to="/upload" className={styles.analyzeLink}>Analyze a Resume</Link>
                 </div>
             )}
 
@@ -48,22 +44,16 @@ const DashboardPage = () => {
                 <div className={styles.analysisList}>
                     {analyses.map((item) => (
                         <div key={item._id} className={styles.analysisCard}>
-                            <h3 className={styles.cardTitle}>Resume Analysis</h3>
+                            <h3 className={styles.cardTitle} title={item.title}>
+                                {item.title || "Untitled Resume Analysis"}
+                            </h3>
                             <div className={styles.cardHeader}>
-                                <span className={styles.scoreBadge}>
-                                    ATS Score: {item.analysisResults?.atsScore || 0}
-                                </span>
-                                <span className={styles.dateText}>
-                                    {new Date(item.createdAt).toLocaleDateString()}
-                                </span>
+                                <span className={styles.scoreBadge}>ATS Score: {item.analysisResults?.atsScore || 0}</span>
+                                <span className={styles.dateText}>{new Date(item.createdAt).toLocaleDateString()}</span>
                             </div>
                             <div className={styles.buttonGroup}>
-                                <Link to={`/dashboard/analysis/${item._id}`} className={styles.viewButton}>
-                                    View Analysis
-                                </Link>
-                                <Link to={`/build/${item._id}`} className={styles.buildButton}>
-                                    Build Resume
-                                </Link>
+                                <Link to={`/dashboard/analysis/${item._id}`} className={styles.viewButton}>View Analysis</Link>
+                                <Link to={`/build/${item._id}`} className={styles.buildButton}>Build Resume</Link>
                             </div>
                         </div>
                     ))}
