@@ -6,8 +6,9 @@ import Editor from "../components/Editor/Editor";
 import Preview from "../components/Preview/Preview";
 import FeedbackPanel from "../components/FeedbackPanel/FeedbackPanel";
 import styles from "../styles/BuilderPage.module.css";
+import { downloadPDF } from "../pdf/exportUtils"; 
 import { normalizeResumeData } from "../../../utils/resumeNormalizer";
-import { Download, Save, LayoutTemplate, ArrowLeft } from 'lucide-react';
+import { Download, Save, LayoutTemplate, ArrowLeft, UserCircle } from 'lucide-react';
 
 const BuilderPage = () => {
     const { id } = useParams();
@@ -45,11 +46,21 @@ const BuilderPage = () => {
         fetchAndGenerate();
     }, [id]);
 
-    // Simplified update function: receives entire resolved state from Editor to prevent path-based race conditions
     const updateResumeData = useCallback((newData) => {
         setResumeData(newData);
         setIsDirty(true);
     }, []);
+
+    // For testing the Phase 2 UX Persona Order
+    const togglePersona = (e) => {
+        const newPersona = e.target.value;
+        const newData = {
+            ...resumeData,
+            metadata: { ...resumeData.metadata, persona: newPersona }
+        };
+        setResumeData(newData);
+        setIsDirty(true);
+    };
 
     const handleSave = async () => {
         if (!dbResumeId) return;
@@ -81,6 +92,15 @@ const BuilderPage = () => {
                 <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16}/> Dashboard</Link>
                 
                 <div className={styles.templateSelector}>
+                    <UserCircle size={16} className={styles.iconMuted} />
+                    <select value={resumeData?.metadata?.persona || 'experienced'} onChange={togglePersona} className={styles.select}>
+                        <option value="fresher">Student / Fresher</option>
+                        <option value="experienced">Experienced Pro</option>
+                        <option value="career-changer">Career Changer</option>
+                    </select>
+                </div>
+
+                <div className={styles.templateSelector}>
                     <LayoutTemplate size={16} className={styles.iconMuted} />
                     <select value={templateId} onChange={(e) => { setTemplateId(e.target.value); setIsDirty(true); }} className={styles.select}>
                         <option value="classic">Classic</option>
@@ -111,17 +131,17 @@ const BuilderPage = () => {
 
             {/* Split Workspace */}
             <div className={styles.workspace}>
-                {/* Editor Panel (Hidden on mobile if not active) */}
+                {/* Editor Panel */}
                 <div className={`${styles.editorPane} ${activeTab === 'editor' ? styles.paneActive : ''}`}>
                     <Editor resumeData={resumeData} onChange={updateResumeData} analysisResults={analysisData} />
                 </div>
                 
-                {/* Feedback Panel (Desktop sits above preview, Mobile has its own tab) */}
+                {/* Feedback Panel */}
                 <div className={`${styles.feedbackPane} ${activeTab === 'feedback' ? styles.paneActive : ''}`}>
                    <FeedbackPanel analysisResults={analysisData} />
                 </div>
 
-                {/* Preview Panel (Hidden on mobile if not active) */}
+                {/* Preview Panel */}
                 <div className={`${styles.previewPane} ${activeTab === 'preview' ? styles.paneActive : ''}`}>
                     <Preview resumeData={resumeData} templateId={templateId} />
                 </div>

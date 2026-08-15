@@ -1,6 +1,12 @@
 export const normalizeResumeData = (data) => {
     if (!data) return {};
     return {
+        // Add metadata to support dynamic editor features and persona routing
+        metadata: {
+            persona: data.metadata?.persona || 'experienced', // 'fresher', 'experienced', 'career-changer'
+            targetRole: data.metadata?.targetRole || '',
+            jdProvided: !!data.metadata?.jdProvided
+        },
         personalInfo: {
             fullName: data.personalInfo?.fullName || '',
             email: data.personalInfo?.email || '',

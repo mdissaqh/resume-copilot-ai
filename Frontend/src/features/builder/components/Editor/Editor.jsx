@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Trash2, Plus, Link as LinkIcon, Briefcase, GraduationCap, Code, FolderGit2, Award, Zap } from 'lucide-react';
+import { 
+    Trash2, Plus, Link as LinkIcon, Briefcase, GraduationCap, 
+    Code, FolderGit2, Award, ChevronDown, ChevronUp, User, Zap, LayoutList 
+} from 'lucide-react';
 import { normalizeResumeData } from '../../../../utils/resumeNormalizer';
 import { setIn, pushIn, removeIn } from '../../utils/pathHelpers';
 import styles from '../../styles/Editor.module.css';
 
 const Editor = ({ resumeData, onChange, analysisResults }) => {
     const [localData, setLocalData] = useState(() => normalizeResumeData(resumeData));
+    const [expandedSections, setExpandedSections] = useState({ personalInfo: true });
     const debounceTimer = useRef(null);
 
     // Sync local state if parent data completely changes (e.g., initial load or template swap fallback)
@@ -15,219 +19,373 @@ const Editor = ({ resumeData, onChange, analysisResults }) => {
 
     const dispatchChange = (newData) => {
         setLocalData(newData);
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
         
-        if (debounceTimer.current) {
-            clearTimeout(debounceTimer.current);
-        }
-        
-        // 800ms debounce: Editor UI is instantly responsive, but parent/PDF renders only after typing pauses
+        // 800ms debounce ensures fast local typing, controlled PDF updates
         debounceTimer.current = setTimeout(() => {
             onChange(newData);
         }, 800);
     };
 
-    const handleTextChange = (pathArray, value) => {
-        const newData = setIn(localData, pathArray, value);
-        dispatchChange(newData);
-    };
-
+    const handleTextChange = (pathArray, value) => dispatchChange(setIn(localData, pathArray, value));
+    
     const handleArrayTextChange = (pathArray, value) => {
         const arrayValue = value.split('\n').filter(line => line.trim() !== '');
-        handleTextChange(pathArray, arrayValue);
+        dispatchChange(setIn(localData, pathArray, arrayValue));
     };
 
-    const addArrayItem = (pathArray, emptyObj) => {
-        const newData = pushIn(localData, pathArray, emptyObj);
-        dispatchChange(newData);
+    const addArrayItem = (pathArray, emptyObj) => dispatchChange(pushIn(localData, pathArray, emptyObj));
+    const removeArrayItem = (pathArray, index) => dispatchChange(removeIn(localData, pathArray, index));
+
+    const toggleSection = (sectionId) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [sectionId]: !prev[sectionId]
+        }));
     };
 
-    const removeArrayItem = (pathArray, index) => {
-        const newData = removeIn(localData, pathArray, index);
-        dispatchChange(newData);
+    // --- PERSONA-BASED ORDERING LOGIC ---
+    const persona = localData?.metadata?.persona || 'experienced';
+    
+    const getSectionOrder = () => {
+        const base = ['personalInfo'];
+        if (persona === 'fresher') {
+            return [...base, 'education', 'projects', 'skills', 'experience', 'certifications', 'achievements', 'additionalSections'];
+        } else if (persona === 'career-changer') {
+            return [...base, 'professionalSummary', 'skills', 'experience', 'projects', 'education', 'certifications', 'achievements', 'additionalSections'];
+        }
+        // Experienced Default
+        return [...base, 'professionalSummary', 'experience', 'skills', 'education', 'projects', 'certifications', 'achievements', 'additionalSections'];
     };
 
-    // Safely extract AI editor recommendations
-    const recommendations = Array.isArray(analysisResults?.editorRecommendations) ? analysisResults.editorRecommendations : [];
-
-    return (
-        <div className={styles.editorContainer}>
-            {/* Personal Info */}
+    // --- REUSABLE ACCORDION WRAPPER ---
+    const SectionAccordion = ({ id, title, icon: Icon, badgeCount, children }) => {
+        const isOpen = expandedSections[id];
+        return (
             <div className={styles.sectionCard}>
-                <h3 className={styles.sectionTitle}>Personal Information</h3>
-                <div className={styles.grid}>
-                    <div className={styles.formGroup}><label>Full Name</label><input className={styles.input} value={localData.personalInfo.fullName || ''} onChange={(e) => handleTextChange(['personalInfo', 'fullName'], e.target.value)} /></div>
-                    <div className={styles.formGroup}><label>Email</label><input className={styles.input} value={localData.personalInfo.email || ''} onChange={(e) => handleTextChange(['personalInfo', 'email'], e.target.value)} /></div>
-                    <div className={styles.formGroup}><label>Phone</label><input className={styles.input} value={localData.personalInfo.phone || ''} onChange={(e) => handleTextChange(['personalInfo', 'phone'], e.target.value)} /></div>
-                    <div className={styles.formGroup}><label>Location</label><input className={styles.input} value={localData.personalInfo.location || ''} onChange={(e) => handleTextChange(['personalInfo', 'location'], e.target.value)} /></div>
+                <div className={styles.sectionHeader} onClick={() => toggleSection(id)}>
+                    <div className={styles.sectionTitleWrap}>
+                        <div className={styles.sectionIcon}><Icon size={20} /></div>
+                        <h3 className={styles.sectionTitle}>{title}</h3>
+                        {badgeCount > 0 && <span className={styles.sectionBadge}>{badgeCount}</span>}
+                    </div>
+                    {isOpen ? <ChevronUp className={styles.chevron} size={20} /> : <ChevronDown className={styles.chevron} size={20} />}
                 </div>
+                {isOpen && <div className={styles.sectionContent}>{children}</div>}
+            </div>
+        );
+    };
 
-                <div className={styles.sectionHeaderFlex} style={{ marginTop: '24px' }}>
-                    <h4 className={styles.subTitle}><LinkIcon size={16} /> Professional Links</h4>
-                    <button className={styles.addBtn} onClick={() => addArrayItem(['personalInfo', 'links'], { platform: '', url: '' })}><Plus size={16} /> Add Link</button>
-                </div>
-                
-                {localData.personalInfo.links.map((link, index) => (
+    // --- SECTION RENDERERS ---
+
+    const renderPersonalInfo = () => (
+        <SectionAccordion id="personalInfo" title="Personal Information" icon={User} badgeCount={0}>
+            <div className={styles.grid}>
+                <div className={styles.formGroup}><label>Full Name *</label><input className={styles.input} placeholder="e.g. Jane Doe" value={localData.personalInfo.fullName || ''} onChange={(e) => handleTextChange(['personalInfo', 'fullName'], e.target.value)} /></div>
+                <div className={styles.formGroup}><label>Email *</label><input className={styles.input} placeholder="jane@example.com" value={localData.personalInfo.email || ''} onChange={(e) => handleTextChange(['personalInfo', 'email'], e.target.value)} /></div>
+                <div className={styles.formGroup}><label>Phone (Optional)</label><input className={styles.input} placeholder="+1 234 567 8900" value={localData.personalInfo.phone || ''} onChange={(e) => handleTextChange(['personalInfo', 'phone'], e.target.value)} /></div>
+                <div className={styles.formGroup}><label>Location (Optional)</label><input className={styles.input} placeholder="City, State" value={localData.personalInfo.location || ''} onChange={(e) => handleTextChange(['personalInfo', 'location'], e.target.value)} /></div>
+            </div>
+            
+            <div className={styles.formGroup} style={{ marginTop: '16px' }}>
+                <label>Professional Links</label>
+                {localData.personalInfo.links?.map((link, index) => (
                     <div key={index} className={styles.gridArray}>
-                        <div className={styles.formGroup}><input className={styles.input} placeholder="Platform (e.g., LinkedIn)" value={link.platform || ''} onChange={(e) => handleTextChange(['personalInfo', 'links', index, 'platform'], e.target.value)} /></div>
-                        <div className={styles.formGroup}><input className={styles.input} placeholder="https://..." value={link.url || ''} onChange={(e) => handleTextChange(['personalInfo', 'links', index, 'url'], e.target.value)} /></div>
+                        <input className={styles.input} placeholder="Platform (e.g. LinkedIn)" value={link.platform || ''} onChange={(e) => handleTextChange(['personalInfo', 'links', index, 'platform'], e.target.value)} />
+                        <input className={styles.input} placeholder="https://..." value={link.url || ''} onChange={(e) => handleTextChange(['personalInfo', 'links', index, 'url'], e.target.value)} />
                         <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['personalInfo', 'links'], index)} title="Remove Link"><Trash2 size={18} /></button>
                     </div>
                 ))}
-                
-                {/* Dynamic AI UI: Personal Info Recommendations */}
-                {recommendations.filter(r => r.section === 'personalInfo' && r.action === 'ADD_INPUT').map((rec, idx) => (
-                    <div key={`rec-pi-${idx}`} className={styles.recommendationBanner}>
-                        <div className={styles.recText}><strong>💡 General ATS Advice:</strong> {rec.reason}</div>
-                        <button className={styles.actionBtn} onClick={() => addArrayItem(['personalInfo', 'links'], { platform: rec.label, url: '' })}>+ Add {rec.label}</button>
-                    </div>
-                ))}
+                <button className={styles.actionBtn} style={{ alignSelf: 'flex-start' }} onClick={() => addArrayItem(['personalInfo', 'links'], { platform: '', url: '' })}>
+                    <Plus size={16} /> Add Link (LinkedIn, GitHub, Portfolio)
+                </button>
             </div>
+        </SectionAccordion>
+    );
 
-            {/* Professional Summary */}
-            <div className={styles.sectionCard}>
-                <h3 className={styles.sectionTitle}>Professional Summary</h3>
-                <div className={styles.formGroup}>
-                    <textarea className={styles.textarea} value={localData.professionalSummary || ''} onChange={(e) => handleTextChange(['professionalSummary'], e.target.value)} />
-                </div>
+    const renderSummary = () => (
+        <SectionAccordion id="professionalSummary" title="Professional Summary" icon={User} badgeCount={0}>
+            <div className={styles.formGroup}>
+                <label>Summary (Keep it concise, 2-3 sentences max)</label>
+                <textarea className={styles.textarea} placeholder="Experienced software engineer specializing in scalable backend systems..." value={localData.professionalSummary || ''} onChange={(e) => handleTextChange(['professionalSummary'], e.target.value)} />
             </div>
+        </SectionAccordion>
+    );
 
-            {/* Experience */}
-            <div className={styles.sectionCard}>
-                <div className={styles.sectionHeaderFlex}>
-                    <h3 className={styles.sectionTitle} style={{ margin: 0 }}><Briefcase size={20} /> Experience</h3>
-                    <button className={styles.addBtn} onClick={() => addArrayItem(['experience'], { organization: '', role: '', startDate: '', endDate: '', achievements: [] })}><Plus size={16} /> Add Experience</button>
+    const renderExperience = () => (
+        <SectionAccordion id="experience" title="Experience" icon={Briefcase} badgeCount={localData.experience?.length || 0}>
+            {localData.experience?.length === 0 ? (
+                <div className={styles.emptyState}>
+                    <Briefcase size={32} className={styles.emptyIcon} />
+                    <p className={styles.emptyText}>Highlight your professional history and measurable impact.</p>
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['experience'], { organization: '', role: '', startDate: '', endDate: '', achievements: [] })}><Plus size={18} /> Add Experience</button>
                 </div>
-                {localData.experience.map((exp, index) => (
-                    <div key={index} className={styles.itemCard}>
-                        <button className={styles.removeAbsoluteBtn} onClick={() => removeArrayItem(['experience'], index)} title="Remove Experience"><Trash2 size={18} /></button>
-                        <div className={styles.grid}>
-                            <div className={styles.formGroup}><label>Organization</label><input className={styles.input} value={exp.organization || ''} onChange={(e) => handleTextChange(['experience', index, 'organization'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>Role</label><input className={styles.input} value={exp.role || ''} onChange={(e) => handleTextChange(['experience', index, 'role'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>Start Date</label><input className={styles.input} value={exp.startDate || ''} onChange={(e) => handleTextChange(['experience', index, 'startDate'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>End Date</label><input className={styles.input} value={exp.endDate || ''} onChange={(e) => handleTextChange(['experience', index, 'endDate'], e.target.value)} /></div>
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label>Achievements / Responsibilities (One per line)</label>
-                            <textarea className={styles.textarea} value={exp.achievements?.join('\n') || ''} onChange={(e) => handleArrayTextChange(['experience', index, 'achievements'], e.target.value)} />
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Projects */}
-            <div className={styles.sectionCard}>
-                <div className={styles.sectionHeaderFlex}>
-                    <h3 className={styles.sectionTitle} style={{ margin: 0 }}><FolderGit2 size={20} /> Projects</h3>
-                    <button className={styles.addBtn} onClick={() => addArrayItem(['projects'], { title: '', date: '', description: '', githubUrl: '', liveUrl: '', highlights: [] })}><Plus size={16} /> Add Project</button>
-                </div>
-                {localData.projects.map((proj, index) => {
-                    const projRecs = recommendations.filter(r => r.section === 'projects' && r.fieldTarget === `projects[${index}].${r.field}`);
-                    
-                    return (
+            ) : (
+                <>
+                    {localData.experience?.map((exp, index) => (
                         <div key={index} className={styles.itemCard}>
-                            <button className={styles.removeAbsoluteBtn} onClick={() => removeArrayItem(['projects'], index)} title="Remove Project"><Trash2 size={18} /></button>
+                            <div className={styles.itemHeader}>
+                                <span className={styles.itemTitle}>{exp.role || 'New Role'} at {exp.organization || 'Company'}</span>
+                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['experience'], index)}><Trash2 size={18} /></button>
+                            </div>
                             <div className={styles.grid}>
-                                <div className={styles.formGroup}><label>Project Title</label><input className={styles.input} value={proj.title || ''} onChange={(e) => handleTextChange(['projects', index, 'title'], e.target.value)} /></div>
-                                <div className={styles.formGroup}><label>Date (Optional)</label><input className={styles.input} value={proj.date || ''} onChange={(e) => handleTextChange(['projects', index, 'date'], e.target.value)} /></div>
-                                <div className={styles.formGroup}><label>GitHub URL</label><input className={styles.input} value={proj.githubUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'githubUrl'], e.target.value)} placeholder="https://..." /></div>
-                                <div className={styles.formGroup}><label>Live URL</label><input className={styles.input} value={proj.liveUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'liveUrl'], e.target.value)} placeholder="https://..." /></div>
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label>Description</label>
-                                <textarea className={styles.textarea} style={{ minHeight: '60px' }} value={proj.description || ''} onChange={(e) => handleTextChange(['projects', index, 'description'], e.target.value)} />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label>Highlights / Technical Details (One per line)</label>
-                                <textarea className={styles.textarea} value={proj.highlights?.join('\n') || ''} onChange={(e) => handleArrayTextChange(['projects', index, 'highlights'], e.target.value)} />
+                                <div className={styles.formGroup}><label>Job Title</label><input className={styles.input} value={exp.role || ''} onChange={(e) => handleTextChange(['experience', index, 'role'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Company / Organization</label><input className={styles.input} value={exp.organization || ''} onChange={(e) => handleTextChange(['experience', index, 'organization'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Start Date</label><input className={styles.input} placeholder="Jan 2020" value={exp.startDate || ''} onChange={(e) => handleTextChange(['experience', index, 'startDate'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>End Date</label><input className={styles.input} placeholder="Present" value={exp.endDate || ''} onChange={(e) => handleTextChange(['experience', index, 'endDate'], e.target.value)} /></div>
                             </div>
                             
-                            {/* Dynamic AI UI: Project Specific Inputs */}
-                            {projRecs.map((rec, rIdx) => (
-                                <div key={rIdx} className={styles.recommendationBanner}>
-                                    <div className={styles.recText}><strong>💡 General ATS Advice:</strong> {rec.reason}</div>
-                                    {!proj[rec.field] && (
-                                        <div className={styles.formGroup} style={{marginBottom: 0, marginTop: '10px'}}>
-                                            <label>{rec.label}</label>
-                                            <input className={styles.input} placeholder={rec.suggestedValue || "https://..."} onChange={(e) => handleTextChange(['projects', index, rec.field], e.target.value)} />
-                                        </div>
-                                    )}
+                            {/* Progressive Disclosure */}
+                            {exp.location !== undefined ? (
+                                <div className={styles.formGroup}><label>Location (Optional)</label><input className={styles.input} value={exp.location || ''} onChange={(e) => handleTextChange(['experience', index, 'location'], e.target.value)} /></div>
+                            ) : null}
+
+                            <div className={styles.formGroup}>
+                                <label>Key Achievements (One per line)</label>
+                                <textarea className={styles.textarea} placeholder="• Improved API response times by 40%..." value={exp.achievements?.join('\n') || ''} onChange={(e) => handleArrayTextChange(['experience', index, 'achievements'], e.target.value)} />
+                            </div>
+
+                            <div className={styles.progressiveActions}>
+                                {exp.location === undefined && (
+                                    <button className={styles.actionBtn} onClick={() => handleTextChange(['experience', index, 'location'], '')}><Plus size={14} /> Add Location</button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['experience'], { organization: '', role: '', startDate: '', endDate: '', achievements: [] })}><Plus size={18} /> Add Another Role</button>
+                </>
+            )}
+        </SectionAccordion>
+    );
+
+    const renderProjects = () => (
+        <SectionAccordion id="projects" title="Projects" icon={FolderGit2} badgeCount={localData.projects?.length || 0}>
+            {localData.projects?.length === 0 ? (
+                <div className={styles.emptyState}>
+                    <FolderGit2 size={32} className={styles.emptyIcon} />
+                    <p className={styles.emptyText}>Projects demonstrate practical skills. Highly recommended for tech roles and students.</p>
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['projects'], { title: '', description: '', highlights: [] })}><Plus size={18} /> Add Project</button>
+                </div>
+            ) : (
+                <>
+                    {localData.projects?.map((proj, index) => {
+                        return (
+                            <div key={index} className={styles.itemCard}>
+                                <div className={styles.itemHeader}>
+                                    <span className={styles.itemTitle}>{proj.title || 'New Project'}</span>
+                                    <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['projects'], index)}><Trash2 size={18} /></button>
+                                </div>
+                                <div className={styles.formGroup}><label>Project Name</label><input className={styles.input} value={proj.title || ''} onChange={(e) => handleTextChange(['projects', index, 'title'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Brief Description</label><textarea className={styles.textarea} style={{minHeight: '60px'}} value={proj.description || ''} onChange={(e) => handleTextChange(['projects', index, 'description'], e.target.value)} /></div>
+                                
+                                {/* Progressive Disclosure Fields */}
+                                <div className={styles.grid}>
+                                    {proj.date !== undefined && <div className={styles.formGroup}><label>Date</label><input className={styles.input} value={proj.date || ''} onChange={(e) => handleTextChange(['projects', index, 'date'], e.target.value)} /></div>}
+                                    {proj.githubUrl !== undefined && <div className={styles.formGroup}><label>GitHub URL</label><input className={styles.input} value={proj.githubUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'githubUrl'], e.target.value)} /></div>}
+                                    {proj.liveUrl !== undefined && <div className={styles.formGroup}><label>Live Demo URL</label><input className={styles.input} value={proj.liveUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'liveUrl'], e.target.value)} /></div>}
+                                </div>
+
+                                {proj.highlights !== undefined && (
+                                    <div className={styles.formGroup}>
+                                        <label>Technical Details / Highlights (One per line)</label>
+                                        <textarea className={styles.textarea} value={proj.highlights?.join('\n') || ''} onChange={(e) => handleArrayTextChange(['projects', index, 'highlights'], e.target.value)} />
+                                    </div>
+                                )}
+
+                                <div className={styles.progressiveActions}>
+                                    {proj.date === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['projects', index, 'date'], '')}><Plus size={14} /> Add Date</button>}
+                                    {proj.githubUrl === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['projects', index, 'githubUrl'], '')}><Plus size={14} /> Add GitHub Link</button>}
+                                    {proj.liveUrl === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['projects', index, 'liveUrl'], '')}><Plus size={14} /> Add Live Demo Link</button>}
+                                    {proj.highlights === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['projects', index, 'highlights'], [])}><Plus size={14} /> Add Bullet Points</button>}
+                                </div>
+                            </div>
+                        );
+                    })}
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['projects'], { title: '', description: '' })}><Plus size={18} /> Add Another Project</button>
+                </>
+            )}
+        </SectionAccordion>
+    );
+
+    const renderEducation = () => (
+        <SectionAccordion id="education" title="Education" icon={GraduationCap} badgeCount={localData.education?.length || 0}>
+            {localData.education?.length === 0 ? (
+                <div className={styles.emptyState}>
+                    <GraduationCap size={32} className={styles.emptyIcon} />
+                    <p className={styles.emptyText}>Add your degrees and academic qualifications.</p>
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['education'], { institution: '', degree: '' })}><Plus size={18} /> Add Education</button>
+                </div>
+            ) : (
+                <>
+                    {localData.education?.map((edu, index) => (
+                        <div key={index} className={styles.itemCard}>
+                            <div className={styles.itemHeader}>
+                                <span className={styles.itemTitle}>{edu.institution || 'New Institution'}</span>
+                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['education'], index)}><Trash2 size={18} /></button>
+                            </div>
+                            <div className={styles.grid}>
+                                <div className={styles.formGroup}><label>Institution / University</label><input className={styles.input} value={edu.institution || ''} onChange={(e) => handleTextChange(['education', index, 'institution'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Degree (e.g. B.S., B.A.)</label><input className={styles.input} value={edu.degree || ''} onChange={(e) => handleTextChange(['education', index, 'degree'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Field of Study / Major</label><input className={styles.input} value={edu.fieldOfStudy || ''} onChange={(e) => handleTextChange(['education', index, 'fieldOfStudy'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Graduation Date</label><input className={styles.input} placeholder="May 2024" value={edu.endDate || ''} onChange={(e) => handleTextChange(['education', index, 'endDate'], e.target.value)} /></div>
+                                
+                                {/* Progressive */}
+                                {edu.location !== undefined && <div className={styles.formGroup}><label>Location</label><input className={styles.input} value={edu.location || ''} onChange={(e) => handleTextChange(['education', index, 'location'], e.target.value)} /></div>}
+                                {edu.startDate !== undefined && <div className={styles.formGroup}><label>Start Date</label><input className={styles.input} value={edu.startDate || ''} onChange={(e) => handleTextChange(['education', index, 'startDate'], e.target.value)} /></div>}
+                            </div>
+                            
+                            <div className={styles.progressiveActions}>
+                                {edu.location === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['education', index, 'location'], '')}><Plus size={14} /> Add Location</button>}
+                                {edu.startDate === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['education', index, 'startDate'], '')}><Plus size={14} /> Add Start Date</button>}
+                            </div>
+                        </div>
+                    ))}
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['education'], { institution: '', degree: '' })}><Plus size={18} /> Add Another Degree</button>
+                </>
+            )}
+        </SectionAccordion>
+    );
+
+    const renderSkills = () => (
+        <SectionAccordion id="skills" title="Skills" icon={Code} badgeCount={localData.skills?.length || 0}>
+             {localData.skills?.length === 0 ? (
+                <div className={styles.emptyState}>
+                    <Code size={32} className={styles.emptyIcon} />
+                    <p className={styles.emptyText}>Add skills to align with ATS keywords.</p>
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['skills'], { category: 'Languages', items: [] })}><Plus size={18} /> Add Skill Group</button>
+                </div>
+            ) : (
+                <>
+                    {localData.skills?.map((skill, index) => (
+                        <div key={index} className={styles.itemCard}>
+                            <div className={styles.itemHeader} style={{borderBottom: 'none', paddingBottom: 0, marginBottom: 8}}>
+                                <span className={styles.itemTitle}>{skill.category || 'New Category'}</span>
+                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['skills'], index)}><Trash2 size={18} /></button>
+                            </div>
+                            <div className={styles.formGroup} style={{ marginBottom: '12px' }}><label>Category (e.g. Frameworks, Tools)</label><input className={styles.input} value={skill.category || ''} onChange={(e) => handleTextChange(['skills', index, 'category'], e.target.value)} /></div>
+                            <div className={styles.formGroup}>
+                                <label>Skills (Comma separated)</label>
+                                <input className={styles.input} placeholder="React, Node.js, AWS" value={skill.items?.join(', ') || ''} onChange={(e) => handleTextChange(['skills', index, 'items'], e.target.value.split(',').map(s=>s.trim()))} />
+                            </div>
+                        </div>
+                    ))}
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['skills'], { category: '', items: [] })}><Plus size={18} /> Add Another Category</button>
+                </>
+            )}
+        </SectionAccordion>
+    );
+
+    const renderCertifications = () => (
+        <SectionAccordion id="certifications" title="Certifications" icon={Award} badgeCount={localData.certifications?.length || 0}>
+             {localData.certifications?.length === 0 ? (
+                <div className={styles.emptyState}>
+                    <Award size={32} className={styles.emptyIcon} />
+                    <p className={styles.emptyText}>Licenses and certifications can strengthen your credibility.</p>
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['certifications'], { name: '', issuer: '' })}><Plus size={18} /> Add Certification</button>
+                </div>
+            ) : (
+                <>
+                    {localData.certifications?.map((cert, index) => (
+                        <div key={index} className={styles.itemCard}>
+                            <div className={styles.itemHeader}>
+                                <span className={styles.itemTitle}>{cert.name || 'New Certification'}</span>
+                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['certifications'], index)}><Trash2 size={18} /></button>
+                            </div>
+                            <div className={styles.grid}>
+                                <div className={styles.formGroup}><label>Certification Name</label><input className={styles.input} value={cert.name || ''} onChange={(e) => handleTextChange(['certifications', index, 'name'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Issuing Organization</label><input className={styles.input} value={cert.issuer || ''} onChange={(e) => handleTextChange(['certifications', index, 'issuer'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Date</label><input className={styles.input} value={cert.date || ''} onChange={(e) => handleTextChange(['certifications', index, 'date'], e.target.value)} /></div>
+                            </div>
+                        </div>
+                    ))}
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['certifications'], { name: '', issuer: '' })}><Plus size={18} /> Add Another Certification</button>
+                </>
+            )}
+        </SectionAccordion>
+    );
+
+    const renderAchievements = () => (
+        <SectionAccordion id="achievements" title="Achievements & Awards" icon={Zap} badgeCount={localData.achievements?.length || 0}>
+             {localData.achievements?.length === 0 ? (
+                <div className={styles.emptyState}>
+                    <Zap size={32} className={styles.emptyIcon} />
+                    <p className={styles.emptyText}>Add notable standalone awards or recognitions.</p>
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['achievements'], '')}><Plus size={18} /> Add Achievement</button>
+                </div>
+            ) : (
+                <div className={styles.formGroup}>
+                    {localData.achievements?.map((ach, index) => (
+                        <div key={index} className={styles.gridArray} style={{ gridTemplateColumns: '1fr auto', marginBottom: '8px' }}>
+                            <input className={styles.input} value={ach || ''} onChange={(e) => handleTextChange(['achievements', index], e.target.value)} />
+                            <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['achievements'], index)}><Trash2 size={18} /></button>
+                        </div>
+                    ))}
+                    <button className={styles.primaryAddBtn} style={{ marginTop: '8px' }} onClick={() => addArrayItem(['achievements'], '')}><Plus size={18} /> Add Another</button>
+                </div>
+            )}
+        </SectionAccordion>
+    );
+
+    const renderAdditionalSections = () => (
+        <SectionAccordion id="additionalSections" title="Custom Sections" icon={LayoutList} badgeCount={localData.additionalSections?.length || 0}>
+            {localData.additionalSections?.length === 0 ? (
+                <div className={styles.emptyState}>
+                    <LayoutList size={32} className={styles.emptyIcon} />
+                    <p className={styles.emptyText}>Add custom sections like Volunteering, Publications, or Languages.</p>
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['additionalSections'], { sectionTitle: '', items: [] })}><Plus size={18} /> Add Custom Section</button>
+                </div>
+            ) : (
+                <>
+                    {localData.additionalSections?.map((section, index) => (
+                        <div key={index} className={styles.itemCard}>
+                            <div className={styles.itemHeader} style={{borderBottom: 'none', paddingBottom: 0, marginBottom: 12}}>
+                                <input className={styles.input} style={{fontWeight: 600, fontSize: '1rem', flex: 1, marginRight: '12px'}} placeholder="Section Title (e.g. Volunteer Work)" value={section.sectionTitle || ''} onChange={(e) => handleTextChange(['additionalSections', index, 'sectionTitle'], e.target.value)} />
+                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['additionalSections'], index)}><Trash2 size={18} /></button>
+                            </div>
+                            
+                            {section.items?.map((item, iIndex) => (
+                                <div key={iIndex} className={styles.itemCard} style={{backgroundColor: '#ffffff', padding: '16px', marginBottom: '12px'}}>
+                                     <button className={styles.removeAbsoluteBtn} onClick={() => removeArrayItem(['additionalSections', index, 'items'], iIndex)} title="Remove Item"><Trash2 size={16} /></button>
+                                     <div className={styles.grid}>
+                                        <div className={styles.formGroup}><label>Heading</label><input className={styles.input} value={item.heading || ''} onChange={(e) => handleTextChange(['additionalSections', index, 'items', iIndex, 'heading'], e.target.value)} /></div>
+                                        <div className={styles.formGroup}><label>Subheading</label><input className={styles.input} value={item.subheading || ''} onChange={(e) => handleTextChange(['additionalSections', index, 'items', iIndex, 'subheading'], e.target.value)} /></div>
+                                        <div className={styles.formGroup}><label>Date</label><input className={styles.input} value={item.date || ''} onChange={(e) => handleTextChange(['additionalSections', index, 'items', iIndex, 'date'], e.target.value)} /></div>
+                                     </div>
+                                     <div className={styles.formGroup}>
+                                        <label>Description</label>
+                                        <textarea className={styles.textarea} style={{minHeight: '60px'}} value={item.description || ''} onChange={(e) => handleTextChange(['additionalSections', index, 'items', iIndex, 'description'], e.target.value)} />
+                                     </div>
                                 </div>
                             ))}
+                            <button className={styles.actionBtn} onClick={() => addArrayItem(['additionalSections', index, 'items'], { heading: '', subheading: '', date: '', description: '' })}><Plus size={14} /> Add Item</button>
                         </div>
-                    );
-                })}
-            </div>
+                    ))}
+                    <button className={styles.primaryAddBtn} onClick={() => addArrayItem(['additionalSections'], { sectionTitle: '', items: [] })}><Plus size={18} /> Add Another Custom Section</button>
+                </>
+            )}
+        </SectionAccordion>
+    );
 
-            {/* Education */}
-            <div className={styles.sectionCard}>
-                <div className={styles.sectionHeaderFlex}>
-                    <h3 className={styles.sectionTitle} style={{ margin: 0 }}><GraduationCap size={20} /> Education</h3>
-                    <button className={styles.addBtn} onClick={() => addArrayItem(['education'], { institution: '', degree: '', fieldOfStudy: '', location: '', startDate: '', endDate: '' })}><Plus size={16} /> Add Education</button>
-                </div>
-                {localData.education.map((edu, index) => (
-                    <div key={index} className={styles.itemCard}>
-                        <button className={styles.removeAbsoluteBtn} onClick={() => removeArrayItem(['education'], index)} title="Remove Education"><Trash2 size={18} /></button>
-                        <div className={styles.grid}>
-                            <div className={styles.formGroup}><label>Institution</label><input className={styles.input} value={edu.institution || ''} onChange={(e) => handleTextChange(['education', index, 'institution'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>Degree / Qualification</label><input className={styles.input} value={edu.degree || ''} onChange={(e) => handleTextChange(['education', index, 'degree'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>Field of Study</label><input className={styles.input} value={edu.fieldOfStudy || ''} onChange={(e) => handleTextChange(['education', index, 'fieldOfStudy'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>Location</label><input className={styles.input} value={edu.location || ''} onChange={(e) => handleTextChange(['education', index, 'location'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>Start Date</label><input className={styles.input} value={edu.startDate || ''} onChange={(e) => handleTextChange(['education', index, 'startDate'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>End Date</label><input className={styles.input} value={edu.endDate || ''} onChange={(e) => handleTextChange(['education', index, 'endDate'], e.target.value)} /></div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+    // Render loop based on persona
+    const renderMap = {
+        personalInfo: renderPersonalInfo,
+        professionalSummary: renderSummary,
+        experience: renderExperience,
+        projects: renderProjects,
+        education: renderEducation,
+        skills: renderSkills,
+        certifications: renderCertifications,
+        achievements: renderAchievements,
+        additionalSections: renderAdditionalSections
+    };
 
-            {/* Skills */}
-            <div className={styles.sectionCard}>
-                <div className={styles.sectionHeaderFlex}>
-                    <h3 className={styles.sectionTitle} style={{ margin: 0 }}><Code size={20} /> Skills</h3>
-                    <button className={styles.addBtn} onClick={() => addArrayItem(['skills'], { category: '', items: [] })}><Plus size={16} /> Add Skill Group</button>
-                </div>
-                {localData.skills.map((skill, index) => (
-                    <div key={index} className={styles.itemCard}>
-                        <button className={styles.removeAbsoluteBtn} onClick={() => removeArrayItem(['skills'], index)} title="Remove Skill"><Trash2 size={18} /></button>
-                        <div className={styles.formGroup} style={{ marginBottom: '12px' }}><label>Category (e.g., Languages, Frameworks)</label><input className={styles.input} value={skill.category || ''} onChange={(e) => handleTextChange(['skills', index, 'category'], e.target.value)} /></div>
-                        <div className={styles.formGroup}>
-                            <label>Items (Comma separated)</label>
-                            <input className={styles.input} value={skill.items?.join(', ') || ''} onChange={(e) => handleTextChange(['skills', index, 'items'], e.target.value.split(',').map(s=>s.trim()))} />
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Certifications */}
-            <div className={styles.sectionCard}>
-                <div className={styles.sectionHeaderFlex}>
-                    <h3 className={styles.sectionTitle} style={{ margin: 0 }}><Award size={20} /> Certifications</h3>
-                    <button className={styles.addBtn} onClick={() => addArrayItem(['certifications'], { name: '', issuer: '', date: '' })}><Plus size={16} /> Add Cert</button>
-                </div>
-                {localData.certifications.map((cert, index) => (
-                    <div key={index} className={styles.itemCard}>
-                        <button className={styles.removeAbsoluteBtn} onClick={() => removeArrayItem(['certifications'], index)} title="Remove Certification"><Trash2 size={18} /></button>
-                        <div className={styles.grid}>
-                            <div className={styles.formGroup}><label>Certification Name</label><input className={styles.input} value={cert.name || ''} onChange={(e) => handleTextChange(['certifications', index, 'name'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>Issuer</label><input className={styles.input} value={cert.issuer || ''} onChange={(e) => handleTextChange(['certifications', index, 'issuer'], e.target.value)} /></div>
-                            <div className={styles.formGroup}><label>Date</label><input className={styles.input} value={cert.date || ''} onChange={(e) => handleTextChange(['certifications', index, 'date'], e.target.value)} /></div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            
-            {/* Achievements */}
-            <div className={styles.sectionCard}>
-                <div className={styles.sectionHeaderFlex}>
-                    <h3 className={styles.sectionTitle} style={{ margin: 0 }}><Zap size={20} /> Achievements</h3>
-                    <button className={styles.addBtn} onClick={() => addArrayItem(['achievements'], '')}><Plus size={16} /> Add Achievement</button>
-                </div>
-                {localData.achievements.map((ach, index) => (
-                    <div key={index} className={styles.gridArray}>
-                        <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}><input className={styles.input} value={ach || ''} onChange={(e) => handleTextChange(['achievements', index], e.target.value)} /></div>
-                        <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['achievements'], index)} title="Remove"><Trash2 size={18} /></button>
-                    </div>
-                ))}
-            </div>
+    return (
+        <div className={styles.editorContainer}>
+            {getSectionOrder().map(sectionId => (
+                <React.Fragment key={sectionId}>
+                    {renderMap[sectionId]()}
+                </React.Fragment>
+            ))}
         </div>
     );
 };
