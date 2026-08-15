@@ -7,8 +7,7 @@ import Preview from "../components/Preview/Preview";
 import FeedbackPanel from "../components/FeedbackPanel/FeedbackPanel";
 import styles from "../styles/BuilderPage.module.css";
 import { normalizeResumeData } from "../../../utils/resumeNormalizer";
-import { Download, Save, LayoutTemplate, ArrowLeft, FileText, FileDown } from 'lucide-react';
-import { downloadPDF } from '../pdf/exportUtils';
+import { Download, Save, LayoutTemplate, ArrowLeft } from 'lucide-react';
 
 const BuilderPage = () => {
     const { id } = useParams();
@@ -16,15 +15,13 @@ const BuilderPage = () => {
     const [resumeData, setResumeData] = useState(null);
     const [analysisData, setAnalysisData] = useState(null);
     const [templateId, setTemplateId] = useState("classic");
-
+    
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [isDirty, setIsDirty] = useState(false);
-
-    const [isDownloadOpen, setIsDownloadOpen] = useState(false);
+    
     const [exporting, setExporting] = useState(false);
-    const dropdownRef = useRef(null);
 
     // Mobile Navigation State
     const [activeTab, setActiveTab] = useState("editor");
@@ -48,27 +45,9 @@ const BuilderPage = () => {
         fetchAndGenerate();
     }, [id]);
 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsDownloadOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const updateResumeData = useCallback((pathArray, value) => {
-        setResumeData(prev => {
-            const newData = JSON.parse(JSON.stringify(prev));
-            let current = newData;
-            for (let i = 0; i < pathArray.length - 1; i++) {
-                if (current[pathArray[i]] === undefined) current[pathArray[i]] = {};
-                current = current[pathArray[i]];
-            }
-            current[pathArray[pathArray.length - 1]] = value;
-            return newData;
-        });
+    // Simplified update function: receives entire resolved state from Editor to prevent path-based race conditions
+    const updateResumeData = useCallback((newData) => {
+        setResumeData(newData);
         setIsDirty(true);
     }, []);
 
@@ -87,9 +66,8 @@ const BuilderPage = () => {
 
     const handleDownloadPDF = async () => {
         setExporting(true);
-        setIsDownloadOpen(false);
-        try { await downloadPDF(resumeData, templateId); }
-        catch (e) { alert("Failed to generate PDF."); }
+        try { await downloadPDF(resumeData, templateId); } 
+        catch (e) { alert("Failed to generate PDF."); } 
         finally { setExporting(false); }
     };
 
@@ -100,8 +78,8 @@ const BuilderPage = () => {
         <div className={styles.container}>
             {/* Desktop Toolbar */}
             <div className={styles.header}>
-                <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16} /> Dashboard</Link>
-
+                <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16}/> Dashboard</Link>
+                
                 <div className={styles.templateSelector}>
                     <LayoutTemplate size={16} className={styles.iconMuted} />
                     <select value={templateId} onChange={(e) => { setTemplateId(e.target.value); setIsDirty(true); }} className={styles.select}>
@@ -113,21 +91,17 @@ const BuilderPage = () => {
 
                 <div className={styles.headerActions}>
                     <span className={styles.statusText}>{isDirty ? "Unsaved" : "Saved"}</span>
-
+                    
                     <button className={styles.primaryBtnOutline} onClick={handleSave} disabled={!isDirty || saving}>
-                        <Save size={16} /> {saving ? "Saving..." : "Save"}
+                        <Save size={16}/> {saving ? "Saving..." : "Save"}
                     </button>
 
-                    <button
-                        className={styles.primaryBtn}
-                        onClick={handleDownloadPDF}
-                        disabled={exporting}
-                    >
-                        <Download size={16} /> {exporting ? "Generating PDF..." : "Download PDF"}
+                    <button className={styles.primaryBtn} onClick={handleDownloadPDF} disabled={exporting}>
+                        <Download size={16}/> {exporting ? "Generating PDF..." : "Download PDF"}
                     </button>
                 </div>
             </div>
-
+            
             {/* Mobile Tab Navigation */}
             <div className={styles.mobileTabs}>
                 <button className={`${styles.tabBtn} ${activeTab === 'editor' ? styles.activeTab : ''}`} onClick={() => setActiveTab('editor')}>✎ Editor</button>
@@ -141,10 +115,10 @@ const BuilderPage = () => {
                 <div className={`${styles.editorPane} ${activeTab === 'editor' ? styles.paneActive : ''}`}>
                     <Editor resumeData={resumeData} onChange={updateResumeData} analysisResults={analysisData} />
                 </div>
-
+                
                 {/* Feedback Panel (Desktop sits above preview, Mobile has its own tab) */}
                 <div className={`${styles.feedbackPane} ${activeTab === 'feedback' ? styles.paneActive : ''}`}>
-                    <FeedbackPanel analysisResults={analysisData} />
+                   <FeedbackPanel analysisResults={analysisData} />
                 </div>
 
                 {/* Preview Panel (Hidden on mobile if not active) */}
