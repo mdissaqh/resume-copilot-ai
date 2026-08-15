@@ -21,7 +21,7 @@ const Editor = ({ resumeData, onChange, analysisResults }) => {
         setLocalData(newData);
         
         // Debounce update to prevent heavy PDF regeneration on every keystroke
-        const handler = setTimeout(() => { onChange(path, value); }, 500);
+        const handler = setTimeout(() => { onChange(path, value); }, 800);
         return () => clearTimeout(handler);
     };
 
