@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { generateResumeApi, saveResumeApi } from "../api/builder.api";
 import { getAnalysisByIdApi } from "../../dashboard/api/dashboard.api";
 import Editor from "../components/Editor/Editor";
@@ -12,6 +12,9 @@ import { Download, Save, LayoutTemplate, ArrowLeft, UserCircle } from 'lucide-re
 
 const BuilderPage = () => {
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
+    const initialFocusSection = searchParams.get("focus") || 'personalInfo';
+
     const [dbResumeId, setDbResumeId] = useState(null);
     const [resumeData, setResumeData] = useState(null);
     const [analysisData, setAnalysisData] = useState(null);
@@ -21,10 +24,8 @@ const BuilderPage = () => {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [isDirty, setIsDirty] = useState(false);
-    
     const [exporting, setExporting] = useState(false);
 
-    // Mobile Navigation State
     const [activeTab, setActiveTab] = useState("editor");
 
     useEffect(() => {
@@ -51,7 +52,6 @@ const BuilderPage = () => {
         setIsDirty(true);
     }, []);
 
-    // For testing the Phase 2 UX Persona Order
     const togglePersona = (e) => {
         const newPersona = e.target.value;
         const newData = {
@@ -87,7 +87,6 @@ const BuilderPage = () => {
 
     return (
         <div className={styles.container}>
-            {/* Desktop Toolbar */}
             <div className={styles.header}>
                 <Link to="/dashboard" className={styles.backLink}><ArrowLeft size={16}/> Dashboard</Link>
                 
@@ -111,37 +110,31 @@ const BuilderPage = () => {
 
                 <div className={styles.headerActions}>
                     <span className={styles.statusText}>{isDirty ? "Unsaved" : "Saved"}</span>
-                    
                     <button className={styles.primaryBtnOutline} onClick={handleSave} disabled={!isDirty || saving}>
                         <Save size={16}/> {saving ? "Saving..." : "Save"}
                     </button>
-
                     <button className={styles.primaryBtn} onClick={handleDownloadPDF} disabled={exporting}>
                         <Download size={16}/> {exporting ? "Generating PDF..." : "Download PDF"}
                     </button>
                 </div>
             </div>
             
-            {/* Mobile Tab Navigation */}
             <div className={styles.mobileTabs}>
                 <button className={`${styles.tabBtn} ${activeTab === 'editor' ? styles.activeTab : ''}`} onClick={() => setActiveTab('editor')}>✎ Editor</button>
                 <button className={`${styles.tabBtn} ${activeTab === 'preview' ? styles.activeTab : ''}`} onClick={() => setActiveTab('preview')}>👁 Preview</button>
                 <button className={`${styles.tabBtn} ${activeTab === 'feedback' ? styles.activeTab : ''}`} onClick={() => setActiveTab('feedback')}>✨ Feedback</button>
             </div>
 
-            {/* Split Workspace */}
             <div className={styles.workspace}>
-                {/* Editor Panel */}
                 <div className={`${styles.editorPane} ${activeTab === 'editor' ? styles.paneActive : ''}`}>
-                    <Editor resumeData={resumeData} onChange={updateResumeData} analysisResults={analysisData} />
+                    {/* Pass the initial focus parameter down so the Editor opens the right accordion */}
+                    <Editor resumeData={resumeData} onChange={updateResumeData} analysisResults={analysisData} initialFocus={initialFocusSection} />
                 </div>
                 
-                {/* Feedback Panel */}
                 <div className={`${styles.feedbackPane} ${activeTab === 'feedback' ? styles.paneActive : ''}`}>
                    <FeedbackPanel analysisResults={analysisData} />
                 </div>
 
-                {/* Preview Panel */}
                 <div className={`${styles.previewPane} ${activeTab === 'preview' ? styles.paneActive : ''}`}>
                     <Preview resumeData={resumeData} templateId={templateId} />
                 </div>

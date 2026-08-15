@@ -23,11 +23,14 @@ const SectionAccordion = ({ id, title, icon: Icon, badgeCount, isOpen, onToggle,
     );
 };
 
-const Editor = ({ resumeData, onChange, analysisResults }) => {
-    // 1. Initialize local state from the parent's source of truth
+const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
     const [localData, setLocalData] = useState(() => normalizeResumeData(resumeData));
-    const [expandedSections, setExpandedSections] = useState({ personalInfo: true });
     
+    // 1. Dynamically expand the section the user requested from the Analysis page
+    const [expandedSections, setExpandedSections] = useState({ 
+        [initialFocus || 'personalInfo']: true 
+    });
+
     // 2. Refs for sync management
     const debounceTimer = useRef(null);
     const lastPushedData = useRef(normalizeResumeData(resumeData));

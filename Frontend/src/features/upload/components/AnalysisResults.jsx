@@ -1,133 +1,140 @@
+import { CheckCircle2, AlertTriangle, ArrowRight, Activity, ShieldCheck, Target } from 'lucide-react';
 import styles from '../styles/AnalysisResults.module.css';
 
-export const AnalysisResults = ({ analysis, onReset }) => {
+export const AnalysisResults = ({ analysis, onReset, onNavigateToBuilder }) => {
     if (!analysis) return null;
 
-    const rawScore = analysis.atsScore;
+    // Safely extract AI payload
+    const rawScore = analysis.atsScore || {};
     const isDetailedScore = typeof rawScore === 'object' && rawScore !== null;
-    const totalScore = isDetailedScore ? (rawScore.total || 0) : (rawScore || 0);
-    const breakdown = isDetailedScore ? rawScore : null;
+    
+    // We convert raw numbers into explainable health states rather than displaying arbitrary 0-100 numbers
+    const getHealthState = (score) => {
+        if (!score) return { label: 'Unknown', className: styles.statusWarn, icon: Activity };
+        if (score >= 80) return { label: 'Excellent', className: styles.statusGood, icon: CheckCircle2 };
+        if (score >= 60) return { label: 'Needs Improvement', className: styles.statusWarn, icon: AlertTriangle };
+        return { label: 'Critical Revision', className: styles.statusCrit, icon: AlertTriangle };
+    };
 
-    // 2. Safe Array Extraction (Guards against undefined or invalid AI responses)
+    const parseability = getHealthState(isDetailedScore ? rawScore.parseability : 90); // Default good because we use @react-pdf
+    const impact = getHealthState(isDetailedScore ? rawScore.quantification : rawScore);
+    const roleAlignment = getHealthState(isDetailedScore ? rawScore.keywordMatch : rawScore);
+
     const strengths = Array.isArray(analysis.strengths) ? analysis.strengths : [];
     const weaknesses = Array.isArray(analysis.weaknesses) ? analysis.weaknesses : [];
-    const keywords = Array.isArray(analysis.recommendedKeywords) ? analysis.recommendedKeywords : [];
     const jdGaps = Array.isArray(analysis.jdGaps) ? analysis.jdGaps : [];
-    const missingInfo = Array.isArray(analysis.missingInformation) ? analysis.missingInformation : [];
+    const editorRecs = Array.isArray(analysis.editorRecommendations) ? analysis.editorRecommendations : [];
 
     return (
-        <div className={styles.container}>
+        <div className={styles.dashboardContainer}>
             
             <div className={styles.header}>
-                <div>
-                    <h2 className={styles.title}>{analysis.analysisTitle || "Resume Analysis Results"}</h2>
-                    <p className={styles.summary}>{analysis.summary || "No summary available."}</p>
-                </div>
-                <div className={styles.scoreContainer}>
-                    <div className={styles.scoreCircle}>
-                        <span className={styles.scoreNumber}>{totalScore}</span>
-                        <span className={styles.scoreLabel}>/ 100</span>
+                <h2 className={styles.title}>{analysis.analysisTitle || "Resume Health Overview"}</h2>
+                <p className={styles.summary}>{analysis.summary || "Review your analysis below before proceeding to the builder."}</p>
+            </div>
+
+            {/* Resume Health Metrics (Replaces the fake 100-point ATS score) */}
+            <div className={styles.healthOverview}>
+                <div className={styles.healthCard}>
+                    <span className={styles.healthCardLabel}>Structure & Parseability</span>
+                    <div className={`${styles.healthStatus} ${parseability.className}`}>
+                        <ShieldCheck size={20} /> {parseability.label}
                     </div>
-                    <span className={styles.scoreSubtitle}>Overall Match</span>
+                </div>
+                <div className={styles.healthCard}>
+                    <span className={styles.healthCardLabel}>Impact & Metrics</span>
+                    <div className={`${styles.healthStatus} ${impact.className}`}>
+                        <Activity size={20} /> {impact.label}
+                    </div>
+                </div>
+                <div className={styles.healthCard}>
+                    <span className={styles.healthCardLabel}>Role Alignment</span>
+                    <div className={`${styles.healthStatus} ${roleAlignment.className}`}>
+                        <Target size={20} /> {roleAlignment.label}
+                    </div>
                 </div>
             </div>
 
-            {breakdown && (
-                <div className={styles.section}>
-                    <h3 className={styles.sectionTitle}>ATS Score Breakdown</h3>
-                    <div className={styles.breakdownGrid}>
-                        <div className={styles.metricCard}>
-                            <span className={styles.metricLabel}>Parseability</span>
-                            <span className={styles.metricValue}>{breakdown.parseability ?? "N/A"}</span>
-                        </div>
-                        <div className={styles.metricCard}>
-                            <span className={styles.metricLabel}>Keyword Match</span>
-                            <span className={styles.metricValue}>{breakdown.keywordMatch ?? "N/A"}</span>
-                        </div>
-                        <div className={styles.metricCard}>
-                            <span className={styles.metricLabel}>Content Quality</span>
-                            <span className={styles.metricValue}>{breakdown.contentQuality ?? "N/A"}</span>
-                        </div>
-                        <div className={styles.metricCard}>
-                            <span className={styles.metricLabel}>Quantification</span>
-                            <span className={styles.metricValue}>{breakdown.quantification ?? "N/A"}</span>
-                        </div>
-                        <div className={styles.metricCard}>
-                            <span className={styles.metricLabel}>Completeness</span>
-                            <span className={styles.metricValue}>{breakdown.completeness ?? "N/A"}</span>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <div className={styles.grid2Col}>
+            <div className={styles.detailsGrid}>
+                {/* Actionable Weaknesses & Recommendations */}
                 <div className={styles.card}>
-                    <h3 className={`${styles.sectionTitle} ${styles.successText}`}>Strengths</h3>
-                    {strengths.length > 0 ? (
-                        <ul className={styles.list}>
-                            {strengths.map((item, idx) => <li key={idx}>{item}</li>)}
-                        </ul>
-                    ) : (
-                        <p className={styles.emptyText}>No specific strengths identified.</p>
-                    )}
-                </div>
-
-                <div className={styles.card}>
-                    <h3 className={`${styles.sectionTitle} ${styles.dangerText}`}>Areas for Improvement</h3>
-                    {weaknesses.length > 0 ? (
-                        <ul className={styles.list}>
-                            {weaknesses.map((item, idx) => <li key={idx}>{item}</li>)}
-                        </ul>
-                    ) : (
-                        <p className={styles.emptyText}>No major weaknesses identified.</p>
-                    )}
-                </div>
-            </div>
-
-            <div className={styles.section}>
-                <h3 className={styles.sectionTitle}>Recommended Keywords to Add</h3>
-                {keywords.length > 0 ? (
-                    <div className={styles.tagCloud}>
-                        {keywords.map((kw, idx) => (
-                            <span key={idx} className={styles.tag}>{kw}</span>
+                    <h3 className={`${styles.cardTitle} ${styles.warning}`}>
+                        <AlertTriangle size={22} /> Priority Improvements
+                    </h3>
+                    
+                    <ul className={styles.actionList}>
+                        {jdGaps.map((gap, idx) => (
+                            <li key={`gap-${idx}`} className={`${styles.actionItem} ${styles.actionItemWarning}`}>
+                                <div className={styles.actionItemText}>
+                                    <strong>Missing Skill: {gap.skill}</strong>
+                                </div>
+                                <div className={styles.actionItemReason}>{gap.reason}</div>
+                                {onNavigateToBuilder && (
+                                    <button className={styles.fixButton} onClick={() => onNavigateToBuilder('skills')}>
+                                        Add to Skills <ArrowRight size={14} />
+                                    </button>
+                                )}
+                            </li>
                         ))}
-                    </div>
-                ) : (
-                    <p className={styles.emptyText}>No keyword recommendations available.</p>
+
+                        {editorRecs.map((rec, idx) => (
+                            <li key={`rec-${idx}`} className={styles.actionItem}>
+                                <div className={styles.actionItemText}>
+                                    <strong>{rec.label || 'Improvement'}</strong>: {rec.reason}
+                                </div>
+                                {onNavigateToBuilder && rec.section && (
+                                    <button className={styles.fixButton} onClick={() => onNavigateToBuilder(rec.section)}>
+                                        Fix in Builder <ArrowRight size={14} />
+                                    </button>
+                                )}
+                            </li>
+                        ))}
+
+                        {weaknesses.length > 0 && weaknesses.map((weakness, idx) => (
+                            <li key={`weak-${idx}`} className={styles.actionItem}>
+                                <div className={styles.actionItemText}>{weakness}</div>
+                                {onNavigateToBuilder && (
+                                    <button className={styles.fixButton} onClick={() => onNavigateToBuilder('experience')}>
+                                        Review Experience <ArrowRight size={14} />
+                                    </button>
+                                )}
+                            </li>
+                        ))}
+
+                        {jdGaps.length === 0 && editorRecs.length === 0 && weaknesses.length === 0 && (
+                            <p className={styles.emptyText}>No major issues detected. Your resume foundation is strong.</p>
+                        )}
+                    </ul>
+                </div>
+
+                {/* Verified Strengths */}
+                <div className={styles.card}>
+                    <h3 className={`${styles.cardTitle} ${styles.success}`}>
+                        <CheckCircle2 size={22} /> Verified Strengths
+                    </h3>
+                    {strengths.length > 0 ? (
+                        <ul className={styles.bulletList}>
+                            {strengths.map((item, idx) => <li key={`str-${idx}`}>{item}</li>)}
+                        </ul>
+                    ) : (
+                        <p className={styles.emptyText}>Analysis complete, but no specific standout strengths were identified.</p>
+                    )}
+                </div>
+            </div>
+
+            {/* Global Actions */}
+            <div className={styles.globalActions}>
+                {onReset && (
+                    <button onClick={onReset} className={styles.secondaryBtn}>
+                        Analyze Another Document
+                    </button>
+                )}
+                {onNavigateToBuilder && (
+                    <button onClick={() => onNavigateToBuilder('personalInfo')} className={styles.primaryBuildBtn}>
+                        Open Resume Builder
+                    </button>
                 )}
             </div>
-
-            {(jdGaps.length > 0 || missingInfo.length > 0) && (
-                <div className={styles.section}>
-                    <h3 className={styles.sectionTitle}>Additional Feedback</h3>
-                    {jdGaps.length > 0 && (
-                        <div className={styles.gapWarningBox}>
-                            <h4 className={styles.subHeading}>Missing Job Description Requirements:</h4>
-                            <ul className={styles.list}>
-                                {jdGaps.map((gap, idx) => (
-                                    <li key={idx}><strong>{gap.skill}:</strong> {gap.reason}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                    {missingInfo.length > 0 && (
-                        <div className={styles.infoWarningBox}>
-                            <h4 className={styles.subHeading}>Suggested Information:</h4>
-                            <ul className={styles.list}>
-                                {missingInfo.map((info, idx) => (
-                                    <li key={idx}><strong>{info.label}</strong> - {info.reason}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {onReset && (
-                <div className={styles.actionContainer}>
-                    <button onClick={onReset} className={styles.resetButton}>Analyze Another Resume</button>
-                </div>
-            )}
         </div>
     );
 };

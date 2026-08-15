@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { getAnalysisByIdApi } from "../api/dashboard.api";
 import { AnalysisResults } from "../../upload/components/AnalysisResults";
 import styles from "../styles/ViewAnalysisPage.module.css";
 
 const ViewAnalysisPage = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [analysisData, setAnalysisData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -25,6 +26,11 @@ const ViewAnalysisPage = () => {
         fetchSingleAnalysis();
     }, [id]);
 
+    // This handles the deep-linking from the Analysis actionable buttons
+    const handleNavigateToBuilder = (sectionId) => {
+        navigate(`/build/${id}?focus=${sectionId}`);
+    };
+
     if (loading) return <div className={styles.loader}>Loading analysis...</div>;
     if (error) return <div className={styles.errorBox}>{error}</div>;
     if (!analysisData) return null;
@@ -39,14 +45,8 @@ const ViewAnalysisPage = () => {
             
             <AnalysisResults 
                 analysis={analysisData.analysisResults} 
-                onReset={() => {}} 
+                onNavigateToBuilder={handleNavigateToBuilder}
             />
-
-            <div className={styles.buildActionWrapper}>
-                 <Link to={`/build/${id}`} className={styles.buildButton}>
-                    Build Resume from this Analysis &rarr;
-                </Link>
-            </div>
         </div>
     );
 };

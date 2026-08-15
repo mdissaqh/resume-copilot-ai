@@ -1,126 +1,77 @@
-.container {
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+.dashboardContainer {
+    background: #f8fafc;
+    border-radius: 16px;
     padding: 32px;
-    max-width: 900px;
+    max-width: 1000px;
     margin: 0 auto;
-    color: #1a1a1a;
+    color: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
     margin-bottom: 32px;
     padding-bottom: 24px;
-    border-bottom: 1px solid #eaeaea;
-    gap: 24px;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .title {
-    margin: 0 0 12px 0;
-    font-size: 1.75rem;
-    color: #1a1a1a;
+    margin: 0 0 8px 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.5px;
 }
 
 .summary {
-    color: #4a4a4a;
+    color: #475569;
+    font-size: 1.05rem;
     line-height: 1.6;
     margin: 0;
+    max-width: 800px;
 }
 
-.scoreContainer {
+/* Health Overview Cards */
+.healthOverview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+}
+
+.healthCard {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    flex-shrink: 0;
+    justify-content: space-between;
 }
 
-.scoreCircle {
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #e6f4ea 0%, #ceead6 100%);
-    border: 4px solid #137333;
-    display: flex;
-    justify-content: center;
-    align-items: baseline;
-    padding-top: 26px;
-    box-sizing: border-box;
-    margin-bottom: 8px;
-}
-
-.scoreNumber {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #137333;
-}
-
-.scoreLabel {
-    font-size: 0.9rem;
-    color: #137333;
-    font-weight: 600;
-    margin-left: 2px;
-}
-
-.scoreSubtitle {
+.healthCardLabel {
     font-size: 0.85rem;
-    color: #70757a;
     font-weight: 600;
+    color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: 12px;
 }
 
-.section {
-    margin-bottom: 32px;
-}
-
-.sectionTitle {
-    font-size: 1.25rem;
-    margin: 0 0 16px 0;
-    color: #1a1a1a;
-    font-weight: 600;
-}
-
-.subHeading {
-    font-size: 1.05rem;
-    margin: 0 0 12px 0;
-    color: #1a1a1a;
-}
-
-.breakdownGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 16px;
-}
-
-.metricCard {
-    background-color: #f8f9fa;
-    border: 1px solid #dadce0;
-    border-radius: 8px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
+.healthStatus {
+    display: inline-flex;
     align-items: center;
-    text-align: center;
-}
-
-.metricLabel {
-    font-size: 0.85rem;
-    color: #4a4a4a;
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-}
-
-.metricValue {
-    font-size: 1.5rem;
+    gap: 8px;
+    font-size: 1.1rem;
     font-weight: 700;
-    color: #0066ff;
 }
 
-.grid2Col {
+.statusGood { color: #10b981; }
+.statusWarn { color: #f59e0b; }
+.statusCrit { color: #ef4444; }
+
+/* Grid Layout for Details */
+.detailsGrid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
@@ -128,106 +79,160 @@
 }
 
 .card {
-    background-color: #ffffff;
-    border: 1px solid #eaeaea;
-    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     padding: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
-.successText { color: #137333; }
-.dangerText { color: #d93025; }
+.cardTitle {
+    font-size: 1.25rem;
+    margin: 0 0 20px 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
-.list {
+.cardTitle.success { color: #10b981; }
+.cardTitle.warning { color: #f59e0b; }
+
+/* Actionable Item Lists */
+.actionList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.actionItem {
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.actionItemWarning {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+}
+
+.actionItemText {
+    color: #334155;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.actionItemReason {
+    color: #64748b;
+    font-size: 0.85rem;
+    font-style: italic;
+    margin-top: 4px;
+}
+
+/* Buttons */
+.fixButton {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    color: #3b82f6;
+    border: 1px solid #bfdbfe;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fixButton:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+.globalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.primaryBuildBtn {
+    background: #3b82f6;
+    color: #ffffff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    text-decoration: none;
+}
+
+.primaryBuildBtn:hover {
+    background: #2563eb;
+}
+
+.secondaryBtn {
+    background: #ffffff;
+    color: #475569;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    border: 1px solid #cbd5e1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.secondaryBtn:hover {
+    background: #f1f5f9;
+}
+
+/* Simple List for Strengths */
+.bulletList {
     margin: 0;
     padding-left: 20px;
-    color: #4a4a4a;
+    color: #334155;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.list li {
-    margin-bottom: 10px;
+.bulletList li {
     line-height: 1.5;
 }
 
 .emptyText {
-    color: #70757a;
+    color: #94a3b8;
     font-style: italic;
     margin: 0;
 }
 
-.tagCloud {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.tag {
-    background-color: #f0f7ff;
-    color: #0052cc;
-    border: 1px solid #cce4ff;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-/* Feedback Boxes */
-.gapWarningBox {
-    background-color: #fff8f6;
-    border: 1px solid #facdcd;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 16px;
-}
-
-.infoWarningBox {
-    background-color: #f8f9fa;
-    border: 1px solid #dadce0;
-    border-radius: 8px;
-    padding: 20px;
-}
-
-.actionContainer {
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 1px solid #eaeaea;
-    text-align: center;
-}
-
-.resetButton {
-    background-color: #ffffff;
-    color: #4a4a4a;
-    border: 1px solid #dadce0;
-    padding: 10px 24px;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.resetButton:hover {
-    background-color: #f8f9fa;
-    border-color: #d2d2d2;
-}
-
-/* Responsive adjustments */
+/* Responsive */
 @media (max-width: 768px) {
-    .container {
+    .dashboardContainer {
         padding: 20px;
     }
-
-    .header {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-
-    .grid2Col {
+    .detailsGrid {
         grid-template-columns: 1fr;
     }
-
-    .breakdownGrid {
-        grid-template-columns: repeat(2, 1fr);
+    .globalActions {
+        flex-direction: column;
+    }
+    .primaryBuildBtn, .secondaryBtn {
+        width: 100%;
+        text-align: center;
     }
 }
