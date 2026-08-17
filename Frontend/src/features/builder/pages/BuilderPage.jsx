@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { generateResumeApi, saveResumeApi } from "../api/builder.api";
 import { getAnalysisByIdApi } from "../../dashboard/api/dashboard.api";
-import Editor from "../components/Editor/Editor";
-import Preview from "../components/Preview/Preview";
+import { A4Canvas } from "../components/A4Canvas/A4Canvas";
 import FeedbackPanel from "../components/FeedbackPanel/FeedbackPanel";
 import styles from "../styles/BuilderPage.module.css";
 import { downloadPDF } from "../pdf/exportUtils"; 
@@ -12,8 +11,6 @@ import { Download, Save, LayoutTemplate, ArrowLeft, UserCircle } from 'lucide-re
 
 const BuilderPage = () => {
     const { id } = useParams();
-    const [searchParams] = useSearchParams();
-    const initialFocusSection = searchParams.get("focus") || 'personalInfo';
 
     const { resumeData, setResumeData, isDirty, resetDirty, updateField } = useResumeStore();
 
@@ -26,12 +23,9 @@ const BuilderPage = () => {
     const [error, setError] = useState(null);
     const [exporting, setExporting] = useState(false);
 
-    const [activeTab, setActiveTab] = useState("editor");
-
     useEffect(() => {
         const fetchAndGenerate = async () => {
             try {
-                // If it's a real ID from the DB
                 if (id && id !== 'placeholder') {
                     const analysisReq = await getAnalysisByIdApi(id);
                     setAnalysisData(analysisReq.analysis.analysisResults);
@@ -41,7 +35,6 @@ const BuilderPage = () => {
                     setResumeData(data.resume.content);
                     if (data.resume.templateId) setTemplateId(data.resume.templateId);
                 } else {
-                    // Blank setup for Create-from-scratch (Phase 4 stub)
                     setResumeData({});
                 }
             } catch (err) {
@@ -96,7 +89,7 @@ const BuilderPage = () => {
 
                 <div className={styles.templateSelector}>
                     <LayoutTemplate size={16} className={styles.iconMuted} />
-                    <select value={templateId} onChange={(e) => { setTemplateId(e.target.value); /* Trigger save logically later */ }} className={styles.select}>
+                    <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className={styles.select}>
                         <option value="classic">Classic</option>
                         <option value="modern">Modern</option>
                         <option value="minimal">Minimal</option>
@@ -113,24 +106,15 @@ const BuilderPage = () => {
                     </button>
                 </div>
             </div>
-            
-            <div className={styles.mobileTabs}>
-                <button className={`${styles.tabBtn} ${activeTab === 'editor' ? styles.activeTab : ''}`} onClick={() => setActiveTab('editor')}>✎ Editor</button>
-                <button className={`${styles.tabBtn} ${activeTab === 'preview' ? styles.activeTab : ''}`} onClick={() => setActiveTab('preview')}>👁 Preview</button>
-                <button className={`${styles.tabBtn} ${activeTab === 'feedback' ? styles.activeTab : ''}`} onClick={() => setActiveTab('feedback')}>✨ Feedback</button>
-            </div>
 
             <div className={styles.workspace}>
-                <div className={`${styles.editorPane} ${activeTab === 'editor' ? styles.paneActive : ''}`}>
-                    <Editor initialFocus={initialFocusSection} />
-                </div>
-                
-                <div className={`${styles.feedbackPane} ${activeTab === 'feedback' ? styles.paneActive : ''}`}>
-                   <FeedbackPanel analysisResults={analysisData} />
-                </div>
-
-                <div className={`${styles.previewPane} ${activeTab === 'preview' ? styles.paneActive : ''}`}>
-                    <Preview resumeData={resumeData} templateId={templateId} />
+                {/* 
+                  The Editor pane has been completely removed.
+                  The A4 Canvas is now the primary, centered workspace.
+                */}
+                <div className={styles.canvasArea}>
+                    <FeedbackPanel analysisResults={analysisData} />
+                    <A4Canvas resumeData={resumeData} templateId={templateId} />
                 </div>
             </div>
         </div>

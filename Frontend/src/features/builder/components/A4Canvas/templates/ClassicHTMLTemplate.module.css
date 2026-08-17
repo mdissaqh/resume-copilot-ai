@@ -1,8 +1,3 @@
-/* 
-   CLASSIC TEMPLATE STYLES
-   Prioritizes ATS-readability, serif typography, and strict visual hierarchy.
-*/
-
 .document {
     font-family: "Times New Roman", Times, serif;
     font-size: 11pt;
@@ -10,10 +5,11 @@
     color: #000000;
 }
 
-/*  HEADER  */
+/* --- HEADER --- */
 .header {
     text-align: center;
     margin-bottom: 16pt;
+    position: relative;
 }
 
 .name {
@@ -38,7 +34,7 @@
 .contactSeparator {
     color: #666;
     margin: 0 4pt;
-    user-select: none; /* Prevents ATS from reading the pipe separator */
+    user-select: none;
 }
 
 .link {
@@ -53,6 +49,7 @@
 /* --- SECTIONS --- */
 .section {
     margin-bottom: 14pt;
+    position: relative;
 }
 
 .sectionTitle {
@@ -64,12 +61,24 @@
     padding-bottom: 2pt;
 }
 
-/*  BLOCKS (Experience, Education, Projects) */
-/* break-inside: avoid ensures sections aren't awkwardly split across pages when printing */
+/* --- EDITABLE BLOCKS (Hover UX) --- */
 .blockItem {
     margin-bottom: 10pt;
     page-break-inside: avoid;
     break-inside: avoid;
+    position: relative;
+    padding: 4px;
+    margin-left: -4px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+@media (hover: hover) {
+    .blockItem:hover {
+        background-color: rgba(0, 0, 0, 0.01);
+        border-color: rgba(0, 0, 0, 0.05);
+    }
 }
 
 .rowBetween {
@@ -82,11 +91,13 @@
 .primaryText {
     font-weight: bold;
     font-size: 11pt;
+    flex: 1;
 }
 
 .secondaryText {
     font-style: italic;
     font-size: 11pt;
+    flex: 1;
 }
 
 .dateLocation {
@@ -94,32 +105,48 @@
     text-align: right;
     white-space: nowrap;
     margin-left: 10pt;
+    flex-shrink: 0;
 }
 
 .paragraph {
     margin: 4pt 0;
 }
 
-/* LISTS & BULLETS */
+/* --- LISTS & BULLETS --- */
 .bulletList {
     margin: 4pt 0 0 0;
     padding-left: 16pt;
-    list-style-type: disc;
+    list-style-type: none; /* We use custom bullets for perfect alignment */
 }
 
 .bulletItem {
     margin-bottom: 3pt;
-    padding-left: 2pt;
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+}
+
+.bulletPoint {
+    margin-right: 6pt;
+    user-select: none;
+}
+
+.bulletContent {
+    flex: 1;
 }
 
 .skillItem {
     margin-bottom: 4pt;
     page-break-inside: avoid;
     break-inside: avoid;
+    position: relative;
+    display: flex;
 }
 
 .skillCategory {
     font-weight: bold;
+    margin-right: 4pt;
+    min-width: 100px;
 }
 
 .projectLinks {
@@ -127,4 +154,78 @@
     gap: 8pt;
     font-size: 10pt;
     margin-top: 2pt;
+}
+
+/* --- INLINE EDIT CONTROLS --- */
+.inlineControls {
+    position: absolute;
+    right: -30px;
+    top: 4px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.blockItem:hover .inlineControls,
+.skillItem:hover .inlineControls,
+.bulletItem:hover .inlineControls {
+    opacity: 1;
+}
+
+.iconBtn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.iconBtn:hover {
+    background: #fef2f2;
+}
+
+.addBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    color: #0066ff;
+    border: 1px dashed transparent;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 4pt;
+    transition: all 0.2s;
+    opacity: 0; /* Hidden by default */
+}
+
+.section:hover .addBtn,
+.blockItem:hover .addBtn {
+    opacity: 1;
+    border-color: #bfdbfe;
+}
+
+.addBtn:hover {
+    background: #eff6ff;
+    border-color: #0066ff;
+}
+
+/* Ensure controls disappear during printing */
+@media print {
+    .inlineControls, .addBtn {
+        display: none !important;
+    }
+    .blockItem {
+        padding: 0;
+        margin: 0;
+        border: none;
+        background: none;
+    }
 }

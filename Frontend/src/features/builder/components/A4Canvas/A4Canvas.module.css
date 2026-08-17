@@ -3,53 +3,84 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    /* Ensure no horizontal scrolling on the outer wrapper */
+    /* Prevent body horizontal scroll when scaling */
     overflow-x: hidden; 
+    /* Add top padding for workspace comfort */
+    padding-top: 40px; 
+    box-sizing: border-box;
+}
+
+.scalingContainer {
+    /* The origin must be top center so it scales inward correctly on mobile */
+    transform-origin: top center;
+    display: flex;
+    flex-direction: column;
+    gap: 30px; /* Physical gap between A4 pages in the workspace */
+    /* Smooth zoom out */
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1); 
 }
 
 .a4Page {
-    /* Standard A4 dimensions */
-    width: 210mm;
-    min-height: 297mm;
+    /* EXACT A4 PHYSICAL DIMENSIONS AT 96 DPI */
+    width: 794px; 
+    height: 1123px; 
+    
     background-color: white;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    /* Standard professional resume margins */
-    padding: 20mm;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    
+    /* Approx 20mm margins */
+    padding: 75px; 
     box-sizing: border-box;
-    /* Smooth transitions for responsive scaling */
-    transition: transform 0.2s ease, width 0.2s ease;
-    /* Ensure content stays within paper */
-    overflow-wrap: break-word;
+    
+    position: relative;
+    
+    /* CRITICAL FIX 1: NO overflow: hidden! 
+       We need ResizeObserver to measure blocks accurately even if they 
+       temporarily break bounds before the PaginationEngine reflows them. */
+    overflow: visible; 
+    
+    /* CRITICAL FIX 2: Stop mobile browsers from inflating text sizes */
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
 }
 
-/* Responsive scaling for screens smaller than A4 (approx 800px) */
-@media (max-width: 850px) {
-    .a4Page {
-        width: 100%;
-        min-height: auto;
-        padding: 15px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    }
+/* Ensure margins within blocks don't collapse with the page boundaries */
+.measureBlock {
+    width: 100%;
+    display: flow-root; 
 }
 
-/* Base print rules to guarantee exact physical size when Puppeteer/Browser prints */
+/* Bullet list wrapper styled to perfectly match the template */
+.bulletList {
+    margin: 4pt 0 0 0;
+    padding-left: 16pt;
+    list-style-type: none;
+}
+
+/* PRINT MEDIA RULES for future Puppeteer export */
 @media print {
     .canvasWrapper {
-        display: block;
         padding: 0;
         background: none;
     }
     
+    .scalingContainer {
+        transform: scale(1) !important;
+        gap: 0;
+    }
+
     .a4Page {
-        width: 100%;
-        min-height: 100%;
-        margin: 0;
-        padding: 0;
         box-shadow: none;
+        margin: 0;
+        /* Let the print engine handle the physical bounds */
+        height: auto; 
+        min-height: 1123px;
+        page-break-after: always;
+        overflow: hidden;
     }
 
     @page {
         size: A4;
-        margin: 20mm;
+        margin: 0; 
     }
 }
