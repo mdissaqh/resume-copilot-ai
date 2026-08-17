@@ -1,3 +1,8 @@
+/* 
+   CLASSIC TEMPLATE STYLES
+   Prioritizes ATS-readability, serif typography, and strict visual hierarchy.
+*/
+
 .document {
     font-family: "Times New Roman", Times, serif;
     font-size: 11pt;
@@ -61,7 +66,7 @@
     padding-bottom: 2pt;
 }
 
-/* --- EDITABLE BLOCKS (Hover UX) --- */
+/* --- EDITABLE BLOCKS --- */
 .blockItem {
     margin-bottom: 10pt;
     page-break-inside: avoid;
@@ -116,7 +121,7 @@
 .bulletList {
     margin: 4pt 0 0 0;
     padding-left: 16pt;
-    list-style-type: none; /* We use custom bullets for perfect alignment */
+    list-style-type: none;
 }
 
 .bulletItem {
@@ -189,6 +194,7 @@
     background: #fef2f2;
 }
 
+/* Subtle Add Button (Appears on Hover for populated sections) */
 .addBtn {
     display: flex;
     align-items: center;
@@ -203,7 +209,7 @@
     cursor: pointer;
     margin-top: 4pt;
     transition: all 0.2s;
-    opacity: 0; /* Hidden by default */
+    opacity: 0;
 }
 
 .section:hover .addBtn,
@@ -217,9 +223,36 @@
     border-color: #0066ff;
 }
 
-/* Ensure controls disappear during printing */
+/* PREMIUM EMPTY STATE PLACEHOLDER */
+/* Always visible when a section has zero items */
+.emptySectionPlaceholder {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background-color: rgba(0, 102, 255, 0.02);
+    border: 1px dashed rgba(0, 102, 255, 0.25);
+    border-radius: 6px;
+    color: #0066ff;
+    font-size: 0.95rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 10pt;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.emptySectionPlaceholder:hover {
+    background-color: rgba(0, 102, 255, 0.06);
+    border-color: rgba(0, 102, 255, 0.4);
+}
+
+/* Ensure controls and placeholders disappear during printing/PDF export */
 @media print {
-    .inlineControls, .addBtn {
+    .inlineControls, .addBtn, .emptySectionPlaceholder {
         display: none !important;
     }
     .blockItem {
