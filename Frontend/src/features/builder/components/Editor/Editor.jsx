@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import { useResumeStore } from '../../../../store/useResumeStore';
 import { 
     Trash2, Plus, Link as LinkIcon, Briefcase, GraduationCap, 
     Code, FolderGit2, Award, ChevronDown, ChevronUp, User, Zap, LayoutList 
 } from 'lucide-react';
-import { normalizeResumeData } from '../../../../utils/resumeNormalizer';
-import { setIn, pushIn, removeIn } from '../../utils/pathHelpers';
 import styles from '../../styles/Editor.module.css';
 
 const SectionAccordion = ({ id, title, icon: Icon, badgeCount, isOpen, onToggle, children }) => {
@@ -23,59 +22,28 @@ const SectionAccordion = ({ id, title, icon: Icon, badgeCount, isOpen, onToggle,
     );
 };
 
-const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
-    const [localData, setLocalData] = useState(() => normalizeResumeData(resumeData));
+const Editor = ({ initialFocus }) => {
+    // Replaced local debounced state with fast global Zustand store
+    const { resumeData, updateField, addArrayItem, removeArrayItem } = useResumeStore();
     
-    // 1. Dynamically expand the section the user requested from the Analysis page
     const [expandedSections, setExpandedSections] = useState({ 
         [initialFocus || 'personalInfo']: true 
     });
-
-    // 2. Refs for sync management
-    const debounceTimer = useRef(null);
-    const lastPushedData = useRef(normalizeResumeData(resumeData));
-
-    // 3. The Sync Loop Protector: Only overwrite local typing if the incoming data is genuinely new
-    useEffect(() => {
-        const normalizedParent = normalizeResumeData(resumeData);
-        // Compare parent data against the last data we pushed.
-        // If they differ, the parent changed via AI Action, Template Swap, or Initial Load.
-        if (JSON.stringify(normalizedParent) !== JSON.stringify(lastPushedData.current)) {
-            setLocalData(normalizedParent);
-            lastPushedData.current = normalizedParent;
-        }
-    }, [resumeData]);
-
-    // 4. Safe Dispatcher: Updates local UI instantly, debounces upward to parent/PDF
-    const dispatchChange = (newData) => {
-        setLocalData(newData);
-        
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-        
-        debounceTimer.current = setTimeout(() => {
-            lastPushedData.current = newData; // Record what we are sending to prevent echo overwrites
-            onChange(newData);
-        }, 800);
-    };
-
-    // 5. Immutable Path Updaters
-    const handleTextChange = (pathArray, value) => dispatchChange(setIn(localData, pathArray, value));
-    
-    const handleArrayTextChange = (pathArray, value) => {
-        const arrayValue = value.split('\n').filter(line => line.trim() !== '');
-        dispatchChange(setIn(localData, pathArray, arrayValue));
-    };
-
-    const addArrayItem = (pathArray, emptyObj) => dispatchChange(pushIn(localData, pathArray, emptyObj));
-    const removeArrayItem = (pathArray, index) => dispatchChange(removeIn(localData, pathArray, index));
 
     const toggleSection = (sectionId) => {
         setExpandedSections(prev => ({ ...prev, [sectionId]: !prev[sectionId] }));
     };
 
-    // --- PERSONA-BASED ORDERING LOGIC ---
-    const persona = localData?.metadata?.persona || 'experienced';
+    const handleTextChange = (pathArray, value) => updateField(pathArray, value);
     
+    const handleArrayTextChange = (pathArray, value) => {
+        const arrayValue = value.split('\n').filter(line => line.trim() !== '');
+        updateField(pathArray, arrayValue);
+    };
+
+    if (!resumeData) return null;
+
+    const persona = resumeData.metadata?.persona || 'experienced';
     const getSectionOrder = () => {
         const base = ['personalInfo'];
         if (persona === 'fresher') {
@@ -86,20 +54,18 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
         return [...base, 'professionalSummary', 'experience', 'skills', 'education', 'projects', 'certifications', 'achievements', 'additionalSections'];
     };
 
-    // --- SECTION RENDERERS ---
-
     const renderPersonalInfo = () => (
         <SectionAccordion id="personalInfo" title="Personal Information" icon={User} badgeCount={0} isOpen={expandedSections['personalInfo']} onToggle={toggleSection}>
             <div className={styles.grid}>
-                <div className={styles.formGroup}><label>Full Name *</label><input className={styles.input} placeholder="e.g. Jane Doe" value={localData.personalInfo.fullName || ''} onChange={(e) => handleTextChange(['personalInfo', 'fullName'], e.target.value)} /></div>
-                <div className={styles.formGroup}><label>Email *</label><input className={styles.input} placeholder="jane@example.com" value={localData.personalInfo.email || ''} onChange={(e) => handleTextChange(['personalInfo', 'email'], e.target.value)} /></div>
-                <div className={styles.formGroup}><label>Phone (Optional)</label><input className={styles.input} placeholder="+1 234 567 8900" value={localData.personalInfo.phone || ''} onChange={(e) => handleTextChange(['personalInfo', 'phone'], e.target.value)} /></div>
-                <div className={styles.formGroup}><label>Location (Optional)</label><input className={styles.input} placeholder="City, State" value={localData.personalInfo.location || ''} onChange={(e) => handleTextChange(['personalInfo', 'location'], e.target.value)} /></div>
+                <div className={styles.formGroup}><label>Full Name *</label><input className={styles.input} placeholder="e.g. Jane Doe" value={resumeData.personalInfo?.fullName || ''} onChange={(e) => handleTextChange(['personalInfo', 'fullName'], e.target.value)} /></div>
+                <div className={styles.formGroup}><label>Email *</label><input className={styles.input} placeholder="jane@example.com" value={resumeData.personalInfo?.email || ''} onChange={(e) => handleTextChange(['personalInfo', 'email'], e.target.value)} /></div>
+                <div className={styles.formGroup}><label>Phone (Optional)</label><input className={styles.input} placeholder="+1 234 567 8900" value={resumeData.personalInfo?.phone || ''} onChange={(e) => handleTextChange(['personalInfo', 'phone'], e.target.value)} /></div>
+                <div className={styles.formGroup}><label>Location (Optional)</label><input className={styles.input} placeholder="City, State" value={resumeData.personalInfo?.location || ''} onChange={(e) => handleTextChange(['personalInfo', 'location'], e.target.value)} /></div>
             </div>
             
             <div className={styles.formGroup} style={{ marginTop: '16px' }}>
                 <label>Professional Links</label>
-                {localData.personalInfo.links?.map((link, index) => (
+                {resumeData.personalInfo?.links?.map((link, index) => (
                     <div key={`link-${index}`} className={styles.gridArray}>
                         <input className={styles.input} placeholder="Platform (e.g. LinkedIn)" value={link.platform || ''} onChange={(e) => handleTextChange(['personalInfo', 'links', index, 'platform'], e.target.value)} />
                         <input className={styles.input} placeholder="https://..." value={link.url || ''} onChange={(e) => handleTextChange(['personalInfo', 'links', index, 'url'], e.target.value)} />
@@ -117,14 +83,14 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
         <SectionAccordion id="professionalSummary" title="Professional Summary" icon={User} badgeCount={0} isOpen={expandedSections['professionalSummary']} onToggle={toggleSection}>
             <div className={styles.formGroup}>
                 <label>Summary (Keep it concise, 2-3 sentences max)</label>
-                <textarea className={styles.textarea} placeholder="Experienced software engineer specializing in scalable backend systems..." value={localData.professionalSummary || ''} onChange={(e) => handleTextChange(['professionalSummary'], e.target.value)} />
+                <textarea className={styles.textarea} placeholder="Experienced software engineer specializing in scalable backend systems..." value={resumeData.professionalSummary || ''} onChange={(e) => handleTextChange(['professionalSummary'], e.target.value)} />
             </div>
         </SectionAccordion>
     );
 
     const renderExperience = () => (
-        <SectionAccordion id="experience" title="Experience" icon={Briefcase} badgeCount={localData.experience?.length || 0} isOpen={expandedSections['experience']} onToggle={toggleSection}>
-            {localData.experience?.length === 0 ? (
+        <SectionAccordion id="experience" title="Experience" icon={Briefcase} badgeCount={resumeData.experience?.length || 0} isOpen={expandedSections['experience']} onToggle={toggleSection}>
+            {resumeData.experience?.length === 0 ? (
                 <div className={styles.emptyState}>
                     <Briefcase size={32} className={styles.emptyIcon} />
                     <p className={styles.emptyText}>Highlight your professional history and measurable impact.</p>
@@ -132,7 +98,7 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
                 </div>
             ) : (
                 <>
-                    {localData.experience?.map((exp, index) => (
+                    {resumeData.experience?.map((exp, index) => (
                         <div key={`exp-${index}`} className={styles.itemCard}>
                             <div className={styles.itemHeader}>
                                 <span className={styles.itemTitle}>{exp.role || 'New Role'} at {exp.organization || 'Company'}</span>
@@ -145,20 +111,11 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
                                 <div className={styles.formGroup}><label>End Date</label><input className={styles.input} placeholder="Present" value={exp.endDate || ''} onChange={(e) => handleTextChange(['experience', index, 'endDate'], e.target.value)} /></div>
                             </div>
                             
-                            {/* Progressive Disclosure */}
-                            {exp.location !== undefined ? (
-                                <div className={styles.formGroup}><label>Location (Optional)</label><input className={styles.input} value={exp.location || ''} onChange={(e) => handleTextChange(['experience', index, 'location'], e.target.value)} /></div>
-                            ) : null}
+                            <div className={styles.formGroup}><label>Location (Optional)</label><input className={styles.input} value={exp.location || ''} onChange={(e) => handleTextChange(['experience', index, 'location'], e.target.value)} /></div>
 
                             <div className={styles.formGroup}>
                                 <label>Key Achievements (One per line)</label>
                                 <textarea className={styles.textarea} placeholder="• Improved API response times by 40%..." value={exp.achievements?.join('\n') || ''} onChange={(e) => handleArrayTextChange(['experience', index, 'achievements'], e.target.value)} />
-                            </div>
-
-                            <div className={styles.progressiveActions}>
-                                {exp.location === undefined && (
-                                    <button className={styles.actionBtn} onClick={() => handleTextChange(['experience', index, 'location'], '')}><Plus size={14} /> Add Location</button>
-                                )}
                             </div>
                         </div>
                     ))}
@@ -169,8 +126,8 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
     );
 
     const renderProjects = () => (
-        <SectionAccordion id="projects" title="Projects" icon={FolderGit2} badgeCount={localData.projects?.length || 0} isOpen={expandedSections['projects']} onToggle={toggleSection}>
-            {localData.projects?.length === 0 ? (
+        <SectionAccordion id="projects" title="Projects" icon={FolderGit2} badgeCount={resumeData.projects?.length || 0} isOpen={expandedSections['projects']} onToggle={toggleSection}>
+            {resumeData.projects?.length === 0 ? (
                 <div className={styles.emptyState}>
                     <FolderGit2 size={32} className={styles.emptyIcon} />
                     <p className={styles.emptyText}>Projects demonstrate practical skills. Highly recommended for tech roles and students.</p>
@@ -178,7 +135,7 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
                 </div>
             ) : (
                 <>
-                    {localData.projects?.map((proj, index) => (
+                    {resumeData.projects?.map((proj, index) => (
                         <div key={`proj-${index}`} className={styles.itemCard}>
                             <div className={styles.itemHeader}>
                                 <span className={styles.itemTitle}>{proj.title || 'New Project'}</span>
@@ -187,25 +144,15 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
                             <div className={styles.formGroup}><label>Project Name</label><input className={styles.input} value={proj.title || ''} onChange={(e) => handleTextChange(['projects', index, 'title'], e.target.value)} /></div>
                             <div className={styles.formGroup}><label>Brief Description</label><textarea className={styles.textarea} style={{minHeight: '60px'}} value={proj.description || ''} onChange={(e) => handleTextChange(['projects', index, 'description'], e.target.value)} /></div>
                             
-                            {/* Progressive Disclosure Fields */}
                             <div className={styles.grid}>
-                                {proj.date !== undefined && <div className={styles.formGroup}><label>Date</label><input className={styles.input} value={proj.date || ''} onChange={(e) => handleTextChange(['projects', index, 'date'], e.target.value)} /></div>}
-                                {proj.githubUrl !== undefined && <div className={styles.formGroup}><label>GitHub URL</label><input className={styles.input} value={proj.githubUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'githubUrl'], e.target.value)} /></div>}
-                                {proj.liveUrl !== undefined && <div className={styles.formGroup}><label>Live Demo URL</label><input className={styles.input} value={proj.liveUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'liveUrl'], e.target.value)} /></div>}
+                                <div className={styles.formGroup}><label>Date</label><input className={styles.input} value={proj.date || ''} onChange={(e) => handleTextChange(['projects', index, 'date'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>GitHub URL</label><input className={styles.input} value={proj.githubUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'githubUrl'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Live Demo URL</label><input className={styles.input} value={proj.liveUrl || ''} onChange={(e) => handleTextChange(['projects', index, 'liveUrl'], e.target.value)} /></div>
                             </div>
 
-                            {proj.highlights !== undefined && (
-                                <div className={styles.formGroup}>
-                                    <label>Technical Details / Highlights (One per line)</label>
-                                    <textarea className={styles.textarea} value={proj.highlights?.join('\n') || ''} onChange={(e) => handleArrayTextChange(['projects', index, 'highlights'], e.target.value)} />
-                                </div>
-                            )}
-
-                            <div className={styles.progressiveActions}>
-                                {proj.date === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['projects', index, 'date'], '')}><Plus size={14} /> Add Date</button>}
-                                {proj.githubUrl === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['projects', index, 'githubUrl'], '')}><Plus size={14} /> Add GitHub Link</button>}
-                                {proj.liveUrl === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['projects', index, 'liveUrl'], '')}><Plus size={14} /> Add Live Demo Link</button>}
-                                {proj.highlights === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['projects', index, 'highlights'], [])}><Plus size={14} /> Add Bullet Points</button>}
+                            <div className={styles.formGroup}>
+                                <label>Technical Details / Highlights (One per line)</label>
+                                <textarea className={styles.textarea} value={proj.highlights?.join('\n') || ''} onChange={(e) => handleArrayTextChange(['projects', index, 'highlights'], e.target.value)} />
                             </div>
                         </div>
                     ))}
@@ -216,8 +163,8 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
     );
 
     const renderEducation = () => (
-        <SectionAccordion id="education" title="Education" icon={GraduationCap} badgeCount={localData.education?.length || 0} isOpen={expandedSections['education']} onToggle={toggleSection}>
-            {localData.education?.length === 0 ? (
+        <SectionAccordion id="education" title="Education" icon={GraduationCap} badgeCount={resumeData.education?.length || 0} isOpen={expandedSections['education']} onToggle={toggleSection}>
+            {resumeData.education?.length === 0 ? (
                 <div className={styles.emptyState}>
                     <GraduationCap size={32} className={styles.emptyIcon} />
                     <p className={styles.emptyText}>Add your degrees and academic qualifications.</p>
@@ -225,7 +172,7 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
                 </div>
             ) : (
                 <>
-                    {localData.education?.map((edu, index) => (
+                    {resumeData.education?.map((edu, index) => (
                         <div key={`edu-${index}`} className={styles.itemCard}>
                             <div className={styles.itemHeader}>
                                 <span className={styles.itemTitle}>{edu.institution || 'New Institution'}</span>
@@ -236,15 +183,8 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
                                 <div className={styles.formGroup}><label>Degree (e.g. B.S., B.A.)</label><input className={styles.input} value={edu.degree || ''} onChange={(e) => handleTextChange(['education', index, 'degree'], e.target.value)} /></div>
                                 <div className={styles.formGroup}><label>Field of Study / Major</label><input className={styles.input} value={edu.fieldOfStudy || ''} onChange={(e) => handleTextChange(['education', index, 'fieldOfStudy'], e.target.value)} /></div>
                                 <div className={styles.formGroup}><label>Graduation Date</label><input className={styles.input} placeholder="May 2024" value={edu.endDate || ''} onChange={(e) => handleTextChange(['education', index, 'endDate'], e.target.value)} /></div>
-                                
-                                {/* Progressive */}
-                                {edu.location !== undefined && <div className={styles.formGroup}><label>Location</label><input className={styles.input} value={edu.location || ''} onChange={(e) => handleTextChange(['education', index, 'location'], e.target.value)} /></div>}
-                                {edu.startDate !== undefined && <div className={styles.formGroup}><label>Start Date</label><input className={styles.input} value={edu.startDate || ''} onChange={(e) => handleTextChange(['education', index, 'startDate'], e.target.value)} /></div>}
-                            </div>
-                            
-                            <div className={styles.progressiveActions}>
-                                {edu.location === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['education', index, 'location'], '')}><Plus size={14} /> Add Location</button>}
-                                {edu.startDate === undefined && <button className={styles.actionBtn} onClick={() => handleTextChange(['education', index, 'startDate'], '')}><Plus size={14} /> Add Start Date</button>}
+                                <div className={styles.formGroup}><label>Location</label><input className={styles.input} value={edu.location || ''} onChange={(e) => handleTextChange(['education', index, 'location'], e.target.value)} /></div>
+                                <div className={styles.formGroup}><label>Start Date</label><input className={styles.input} value={edu.startDate || ''} onChange={(e) => handleTextChange(['education', index, 'startDate'], e.target.value)} /></div>
                             </div>
                         </div>
                     ))}
@@ -255,8 +195,8 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
     );
 
     const renderSkills = () => (
-        <SectionAccordion id="skills" title="Skills" icon={Code} badgeCount={localData.skills?.length || 0} isOpen={expandedSections['skills']} onToggle={toggleSection}>
-             {localData.skills?.length === 0 ? (
+        <SectionAccordion id="skills" title="Skills" icon={Code} badgeCount={resumeData.skills?.length || 0} isOpen={expandedSections['skills']} onToggle={toggleSection}>
+             {resumeData.skills?.length === 0 ? (
                 <div className={styles.emptyState}>
                     <Code size={32} className={styles.emptyIcon} />
                     <p className={styles.emptyText}>Add skills to align with ATS keywords.</p>
@@ -264,7 +204,7 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
                 </div>
             ) : (
                 <>
-                    {localData.skills?.map((skill, index) => (
+                    {resumeData.skills?.map((skill, index) => (
                         <div key={`skill-${index}`} className={styles.itemCard}>
                             <div className={styles.itemHeader} style={{borderBottom: 'none', paddingBottom: 0, marginBottom: 8}}>
                                 <span className={styles.itemTitle}>{skill.category || 'New Category'}</span>
@@ -284,8 +224,8 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
     );
 
     const renderCertifications = () => (
-        <SectionAccordion id="certifications" title="Certifications" icon={Award} badgeCount={localData.certifications?.length || 0} isOpen={expandedSections['certifications']} onToggle={toggleSection}>
-             {localData.certifications?.length === 0 ? (
+        <SectionAccordion id="certifications" title="Certifications" icon={Award} badgeCount={resumeData.certifications?.length || 0} isOpen={expandedSections['certifications']} onToggle={toggleSection}>
+             {resumeData.certifications?.length === 0 ? (
                 <div className={styles.emptyState}>
                     <Award size={32} className={styles.emptyIcon} />
                     <p className={styles.emptyText}>Licenses and certifications can strengthen your credibility.</p>
@@ -293,7 +233,7 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
                 </div>
             ) : (
                 <>
-                    {localData.certifications?.map((cert, index) => (
+                    {resumeData.certifications?.map((cert, index) => (
                         <div key={`cert-${index}`} className={styles.itemCard}>
                             <div className={styles.itemHeader}>
                                 <span className={styles.itemTitle}>{cert.name || 'New Certification'}</span>
@@ -313,8 +253,8 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
     );
 
     const renderAchievements = () => (
-        <SectionAccordion id="achievements" title="Achievements & Awards" icon={Zap} badgeCount={localData.achievements?.length || 0} isOpen={expandedSections['achievements']} onToggle={toggleSection}>
-             {localData.achievements?.length === 0 ? (
+        <SectionAccordion id="achievements" title="Achievements & Awards" icon={Zap} badgeCount={resumeData.achievements?.length || 0} isOpen={expandedSections['achievements']} onToggle={toggleSection}>
+             {resumeData.achievements?.length === 0 ? (
                 <div className={styles.emptyState}>
                     <Zap size={32} className={styles.emptyIcon} />
                     <p className={styles.emptyText}>Add notable standalone awards or recognitions.</p>
@@ -322,7 +262,7 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
                 </div>
             ) : (
                 <div className={styles.formGroup}>
-                    {localData.achievements?.map((ach, index) => (
+                    {resumeData.achievements?.map((ach, index) => (
                         <div key={`ach-${index}`} className={styles.gridArray} style={{ gridTemplateColumns: '1fr auto', marginBottom: '8px' }}>
                             <input className={styles.input} value={ach || ''} onChange={(e) => handleTextChange(['achievements', index], e.target.value)} />
                             <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['achievements'], index)}><Trash2 size={18} /></button>
@@ -335,8 +275,8 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
     );
 
     const renderAdditionalSections = () => (
-        <SectionAccordion id="additionalSections" title="Custom Sections" icon={LayoutList} badgeCount={localData.additionalSections?.length || 0} isOpen={expandedSections['additionalSections']} onToggle={toggleSection}>
-            {localData.additionalSections?.length === 0 ? (
+        <SectionAccordion id="additionalSections" title="Custom Sections" icon={LayoutList} badgeCount={resumeData.additionalSections?.length || 0} isOpen={expandedSections['additionalSections']} onToggle={toggleSection}>
+            {resumeData.additionalSections?.length === 0 ? (
                 <div className={styles.emptyState}>
                     <LayoutList size={32} className={styles.emptyIcon} />
                     <p className={styles.emptyText}>Add custom sections like Volunteering, Publications, or Languages.</p>
@@ -344,7 +284,7 @@ const Editor = ({ resumeData, onChange, analysisResults, initialFocus }) => {
                 </div>
             ) : (
                 <>
-                    {localData.additionalSections?.map((section, index) => (
+                    {resumeData.additionalSections?.map((section, index) => (
                         <div key={`custom-${index}`} className={styles.itemCard}>
                             <div className={styles.itemHeader} style={{borderBottom: 'none', paddingBottom: 0, marginBottom: 12}}>
                                 <input className={styles.input} style={{fontWeight: 600, fontSize: '1rem', flex: 1, marginRight: '12px'}} placeholder="Section Title (e.g. Volunteer Work)" value={section.sectionTitle || ''} onChange={(e) => handleTextChange(['additionalSections', index, 'sectionTitle'], e.target.value)} />

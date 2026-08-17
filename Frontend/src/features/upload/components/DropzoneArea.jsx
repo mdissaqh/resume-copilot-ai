@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { useNavigate } from "react-router-dom";
 import styles from "../styles/DropZoneArea.module.css";
 import { analyzeResumeApi } from "../api/upload.api";
 import { AnalysisResults } from './AnalysisResults';
@@ -7,16 +8,21 @@ import { useAuth } from "../../auth/hooks/useAuth";
 
 export const DropzoneArea = () => {
     const { isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+    
     const [selectedFile, setSelectedFile] = useState(null);
     const [hasJobDescription, setHasJobDescription] = useState(null);
     const [jobDescription, setJobDescription] = useState("");
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [error, setError] = useState(null);
+    const [errorCode, setErrorCode] = useState(null);
     const [analysisResult, setAnalysisResult] = useState(null);
 
     const onDrop = useCallback((acceptedFiles) => {
         if (acceptedFiles.length > 0) {
             setSelectedFile(acceptedFiles[0]);
+            setError(null);
+            setErrorCode(null);
         }
     }, []);
 
@@ -43,10 +49,10 @@ export const DropzoneArea = () => {
     const handleProceed = async () => {
         setIsAnalyzing(true);
         setError(null);
+        setErrorCode(null);
 
         try {
             const response = await analyzeResumeApi(selectedFile, jobDescription);
-            console.log("Success! AI Results:", response);
             setAnalysisResult(response.analysis);
 
             if (!isAuthenticated) {
@@ -60,7 +66,10 @@ export const DropzoneArea = () => {
             }
         } catch (err) {
             console.error("Failed to analyze resume:", err);
-            setError("An error occurred while analyzing your resume. Please try again.");
+            const msg = err.response?.data?.message || "An error occurred while analyzing your resume. Please try again.";
+            const code = err.response?.data?.code || "UNKNOWN";
+            setError(msg);
+            setErrorCode(code);
         } finally {
             setIsAnalyzing(false);
         }
@@ -71,11 +80,31 @@ export const DropzoneArea = () => {
         setHasJobDescription(null);
         setJobDescription("");
         setError(null);
+        setErrorCode(null);
         setAnalysisResult(null);
     };
 
     if (analysisResult) {
-        return <AnalysisResults analysis={analysisResult} onReset={handleReset} />;
+        return <AnalysisResults analysis={analysisResult} onReset={handleReset} onNavigateToBuilder={(section) => navigate(`/build/placeholder?focus=${section}`)} />;
+    }
+
+    if (errorCode === "INVALID_RESUME") {
+        return (
+            <div className={styles.container}>
+                <div style={{ textAlign: 'center', padding: '40px', backgroundColor: '#fff0f0', borderRadius: '12px', border: '1px solid #facdcd' }}>
+                    <h2 style={{ color: '#d93025', marginBottom: '16px' }}>Invalid Document Detected</h2>
+                    <p style={{ color: '#3c4043', marginBottom: '24px', fontSize: '1.1rem' }}>{error}</p>
+                    <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+                        <button onClick={handleReset} style={{ padding: '12px 24px', background: '#fff', border: '1px solid #dadce0', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+                            Try Again
+                        </button>
+                        <button onClick={() => navigate('/build')} style={{ padding: '12px 24px', background: '#0066ff', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+                            Create Resume From Scratch
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -96,7 +125,14 @@ export const DropzoneArea = () => {
                 )}
                 <p className={styles.fileTypes}>PDF or DOCX only</p>
             </div>
-            {selectedFile && (
+            
+            {error && !errorCode && (
+                <div style={{ marginTop: '20px', color: '#d93025', background: '#fff0f0', padding: '12px', borderRadius: '8px', border: '1px solid #facdcd', width: '100%', maxWidth: '500px', textAlign: 'left' }}>
+                    {error}
+                </div>
+            )}
+
+            {selectedFile && !errorCode && (
                 <>
                     <div className={styles.filePreview}>
                         <span className={styles.fileName}>📄 {selectedFile.name}</span>
@@ -147,12 +183,12 @@ export const DropzoneArea = () => {
                                 cursor: isAnalyzing ? 'not-allowed' : 'pointer'
                             }}
                         >
-                            {isAnalyzing ? "Analyzing Document..." :
+                            {isAnalyzing ? "Analyzing & Transforming Document..." :
                                 (hasJobDescription ? "Analyze with Job Description →" : "Run Generic Analysis →")}
                         </button>
                     )}
                 </>
             )}
         </div>
-    )
-}
+    );
+};

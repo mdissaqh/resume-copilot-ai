@@ -1,14 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({
+    model: "gemini-3.5-flash-lite",
+    generationConfig: { responseMimeType: "application/json" }
+});
 
 export const generateResumeAnalysis = async (resumeText, jobDescription) => {
     try {
-        const model = genAI.getGenerativeModel({
-            model: "gemini-3.5-flash-lite",
-            generationConfig: { responseMimeType: "application/json" }
-        });
-        
         let prompt = `You are an expert ATS software and Senior Technical Recruiter. Deeply analyze the following resume text. `;
 
         if (jobDescription) {
@@ -57,30 +56,20 @@ export const generateResumeAnalysis = async (resumeText, jobDescription) => {
     }
 };
 
-export const generateStructuredResume = async (resumeText, jobDescription) => {
+// 1. Extracts the exact baseline facts without hallucination or major changes
+export const extractRawResumeJSON = async (resumeText) => {
     try {
-        const model = genAI.getGenerativeModel({
-            model: "gemini-3.5-flash-lite",
-            generationConfig: { responseMimeType: "application/json" }
-        });
-
-        let prompt = `You are an elite Executive Resume Writer. Rewrite and format the resume into an ATS-optimized JSON structure.
+        let prompt = `You are a strict data extraction system. Extract the information from the following resume text into a structured JSON format. 
         CRITICAL RULES:
-        1. DO NOT HALLUCINATE OR FABRICATE. Do NOT invent URLs, metrics, job titles, employers, or skills.
-        2. ORIGINAL CONTENT IS BASELINE: Preserve all valid information. You are an optimizer, not a destructive summarizer.
-        3. PROJECTS STAY PROJECTS: If the candidate lists academic/personal Projects, put them in the 'projects' array. DO NOT convert projects into 'experience' and NEVER invent the title 'Developer' for them.
-        4. QUANTIFICATION: Extract and emphasize existing metrics. Do not invent new ones.`;
-
-        if (jobDescription) {
-            prompt += `\n5. TAILORING: Tailor to this JD: "${jobDescription}". Prioritize relevant existing skills and keywords. Do NOT add skills the candidate does not have.`;
-        }
-
-        prompt += `
-        Original Resume Text: "${resumeText}"
+        1. Extract ONLY what is present.
+        2. DO NOT rewrite, optimize, or improve the text. 
+        3. DO NOT invent URLs, metrics, job titles, employers, or skills.
+        
+        Resume Text: "${resumeText}"
 
         Return JSON matching this exact structure:
         {
-          "personalInfo": { "fullName": "String", "email": "String", "phone": "String", "location": "String", "links": [{ "platform": "String (e.g., LinkedIn, GitHub)", "url": "String" }] },
+          "personalInfo": { "fullName": "String", "email": "String", "phone": "String", "location": "String", "links": [{ "platform": "String", "url": "String" }] },
           "professionalSummary": "String",
           "experience": [ { "organization": "String", "role": "String", "location": "String", "startDate": "String", "endDate": "String", "description": "String", "achievements": ["String"] } ],
           "projects": [ { "title": "String", "technologies": ["String"], "date": "String", "liveUrl": "String", "githubUrl": "String", "description": "String", "highlights": ["String"] } ],
@@ -94,7 +83,45 @@ export const generateStructuredResume = async (resumeText, jobDescription) => {
         const result = await model.generateContent(prompt);
         return JSON.parse(result.response.text());
     } catch (error) {
-        console.error("Gemini Generation API Error:", error);
-        throw new Error("Failed to generate structured resume.");
+        console.error("Gemini Extraction Error:", error);
+        throw new Error("Failed to extract raw resume.");
+    }
+};
+
+// 2. Performs a full ATS transformation and enhancement while preserving facts
+export const transformAndOptimizeResume = async (resumeText, jobDescription) => {
+    try {
+        let prompt = `You are an elite Executive Resume Writer and ATS Optimizer. Rewrite and enhance the resume into a highly optimized JSON structure.
+        CRITICAL RULES:
+        1. DO NOT INVENT FACTS. Do NOT hallucinate metrics, jobs, companies, or skills the candidate does not possess.
+        2. IMPROVE WORDING: Enhance bullet points with strong action verbs. Improve clarity, impact, and professional tone.
+        3. STRUCTURE: Reorganize messy content into clean logic. Ensure academic/personal Projects remain in 'projects'.
+        4. QUANTIFICATION: Emphasize existing metrics strongly.`;
+
+        if (jobDescription) {
+            prompt += `\n5. TAILORING: Tailor specifically to this JD: "${jobDescription}". Highlight relevant existing skills prominently without fabricating missing ones.`;
+        }
+
+        prompt += `
+        Original Resume Text: "${resumeText}"
+
+        Return JSON matching this exact structure:
+        {
+          "personalInfo": { "fullName": "String", "email": "String", "phone": "String", "location": "String", "links": [{ "platform": "String", "url": "String" }] },
+          "professionalSummary": "String",
+          "experience": [ { "organization": "String", "role": "String", "location": "String", "startDate": "String", "endDate": "String", "description": "String", "achievements": ["String"] } ],
+          "projects": [ { "title": "String", "technologies": ["String"], "date": "String", "liveUrl": "String", "githubUrl": "String", "description": "String", "highlights": ["String"] } ],
+          "education": [ { "institution": "String", "degree": "String", "fieldOfStudy": "String", "location": "String", "startDate": "String", "endDate": "String" } ],
+          "skills": [ { "category": "String", "items": ["String"] } ],
+          "certifications": [ { "name": "String", "issuer": "String", "date": "String" } ],
+          "achievements": [ "String" ],
+          "additionalSections": [ { "sectionTitle": "String", "items": [ { "heading": "String", "subheading": "String", "date": "String", "description": "String" } ] } ]
+        }`;
+
+        const result = await model.generateContent(prompt);
+        return JSON.parse(result.response.text());
+    } catch (error) {
+        console.error("Gemini Transformation Error:", error);
+        throw new Error("Failed to optimize structured resume.");
     }
 };

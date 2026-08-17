@@ -19,9 +19,15 @@ const resumeSchema = new mongoose.Schema({
         type: String,
         default: "classic"
     },
+    originalContent: {
+        type: Object,
+        required: true,
+        description: "The untouched extracted source facts of the resume."
+    },
     content: {
         type: Object,
-        required: true
+        required: true,
+        description: "The AI-transformed or user-edited working copy."
     }
 }, { timestamps: true });
 

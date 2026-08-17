@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { generateResumeApi, saveResumeApi } from "../api/builder.api";
 import { getAnalysisByIdApi } from "../../dashboard/api/dashboard.api";
@@ -7,7 +7,7 @@ import Preview from "../components/Preview/Preview";
 import FeedbackPanel from "../components/FeedbackPanel/FeedbackPanel";
 import styles from "../styles/BuilderPage.module.css";
 import { downloadPDF } from "../pdf/exportUtils"; 
-import { normalizeResumeData } from "../../../utils/resumeNormalizer";
+import { useResumeStore } from "../../../store/useResumeStore";
 import { Download, Save, LayoutTemplate, ArrowLeft, UserCircle } from 'lucide-react';
 
 const BuilderPage = () => {
@@ -15,15 +15,15 @@ const BuilderPage = () => {
     const [searchParams] = useSearchParams();
     const initialFocusSection = searchParams.get("focus") || 'personalInfo';
 
+    const { resumeData, setResumeData, isDirty, resetDirty, updateField } = useResumeStore();
+
     const [dbResumeId, setDbResumeId] = useState(null);
-    const [resumeData, setResumeData] = useState(null);
     const [analysisData, setAnalysisData] = useState(null);
     const [templateId, setTemplateId] = useState("classic");
     
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
-    const [isDirty, setIsDirty] = useState(false);
     const [exporting, setExporting] = useState(false);
 
     const [activeTab, setActiveTab] = useState("editor");
@@ -31,13 +31,19 @@ const BuilderPage = () => {
     useEffect(() => {
         const fetchAndGenerate = async () => {
             try {
-                const analysisReq = await getAnalysisByIdApi(id);
-                setAnalysisData(analysisReq.analysis.analysisResults);
+                // If it's a real ID from the DB
+                if (id && id !== 'placeholder') {
+                    const analysisReq = await getAnalysisByIdApi(id);
+                    setAnalysisData(analysisReq.analysis.analysisResults);
 
-                const data = await generateResumeApi(id);
-                setDbResumeId(data.resume._id);
-                setResumeData(normalizeResumeData(data.resume.content));
-                if (data.resume.templateId) setTemplateId(data.resume.templateId);
+                    const data = await generateResumeApi(id);
+                    setDbResumeId(data.resume._id);
+                    setResumeData(data.resume.content);
+                    if (data.resume.templateId) setTemplateId(data.resume.templateId);
+                } else {
+                    // Blank setup for Create-from-scratch (Phase 4 stub)
+                    setResumeData({});
+                }
             } catch (err) {
                 setError("Failed to load or generate the resume. Please ensure the document is a valid resume.");
             } finally {
@@ -45,29 +51,18 @@ const BuilderPage = () => {
             }
         };
         fetchAndGenerate();
-    }, [id]);
-
-    const updateResumeData = useCallback((newData) => {
-        setResumeData(newData);
-        setIsDirty(true);
-    }, []);
+    }, [id, setResumeData]);
 
     const togglePersona = (e) => {
-        const newPersona = e.target.value;
-        const newData = {
-            ...resumeData,
-            metadata: { ...resumeData.metadata, persona: newPersona }
-        };
-        setResumeData(newData);
-        setIsDirty(true);
+        updateField(['metadata', 'persona'], e.target.value);
     };
 
     const handleSave = async () => {
-        if (!dbResumeId) return;
+        if (!dbResumeId || !resumeData) return;
         setSaving(true);
         try {
             await saveResumeApi(dbResumeId, resumeData, templateId);
-            setIsDirty(false);
+            resetDirty();
         } catch (err) {
             alert("Failed to save changes.");
         } finally {
@@ -101,7 +96,7 @@ const BuilderPage = () => {
 
                 <div className={styles.templateSelector}>
                     <LayoutTemplate size={16} className={styles.iconMuted} />
-                    <select value={templateId} onChange={(e) => { setTemplateId(e.target.value); setIsDirty(true); }} className={styles.select}>
+                    <select value={templateId} onChange={(e) => { setTemplateId(e.target.value); /* Trigger save logically later */ }} className={styles.select}>
                         <option value="classic">Classic</option>
                         <option value="modern">Modern</option>
                         <option value="minimal">Minimal</option>
@@ -127,8 +122,7 @@ const BuilderPage = () => {
 
             <div className={styles.workspace}>
                 <div className={`${styles.editorPane} ${activeTab === 'editor' ? styles.paneActive : ''}`}>
-                    {/* Pass the initial focus parameter down so the Editor opens the right accordion */}
-                    <Editor resumeData={resumeData} onChange={updateResumeData} analysisResults={analysisData} initialFocus={initialFocusSection} />
+                    <Editor initialFocus={initialFocusSection} />
                 </div>
                 
                 <div className={`${styles.feedbackPane} ${activeTab === 'feedback' ? styles.paneActive : ''}`}>

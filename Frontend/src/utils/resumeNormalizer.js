@@ -1,26 +1,7 @@
+import { resumeSchema } from './resumeSchema';
+
 export const normalizeResumeData = (data) => {
-    if (!data) return {};
-    return {
-        // Add metadata to support dynamic editor features and persona routing
-        metadata: {
-            persona: data.metadata?.persona || 'experienced', // 'fresher', 'experienced', 'career-changer'
-            targetRole: data.metadata?.targetRole || '',
-            jdProvided: !!data.metadata?.jdProvided
-        },
-        personalInfo: {
-            fullName: data.personalInfo?.fullName || '',
-            email: data.personalInfo?.email || '',
-            phone: data.personalInfo?.phone || '',
-            location: data.personalInfo?.location || '',
-            links: Array.isArray(data.personalInfo?.links) ? data.personalInfo.links : []
-        },
-        professionalSummary: data.professionalSummary || '',
-        experience: Array.isArray(data.experience) ? data.experience : [],
-        projects: Array.isArray(data.projects) ? data.projects : [],
-        education: Array.isArray(data.education) ? data.education : [],
-        skills: Array.isArray(data.skills) ? data.skills : [],
-        certifications: Array.isArray(data.certifications) ? data.certifications : [],
-        achievements: Array.isArray(data.achievements) ? data.achievements : [],
-        additionalSections: Array.isArray(data.additionalSections) ? data.additionalSections : []
-    };
+    // Uses Zod to deeply parse, fallback, and guarantee structure
+    // Prevents app crashes from AI returning strings instead of arrays
+    return resumeSchema.parse(data || {});
 };

@@ -2,7 +2,7 @@ import { extractTextFromPDF, extractTextFromDOCX } from "../services/documentPar
 import { generateResumeAnalysis } from "../services/ai.service.js";
 import Analysis from "../models/analysis.model.js";
 
-const MAX_TEXT_LENGTH = 15000;
+const MAX_TEXT_LENGTH = 25000; // Increased to accommodate messy PDFs
 
 export const analyzeResume = async (req, res) => {
     try {
@@ -15,12 +15,26 @@ export const analyzeResume = async (req, res) => {
         else if (file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") parsedText = await extractTextFromDOCX(file.buffer);
         else return res.status(400).json({ message: "Unsupported file format." });
 
-        if (!parsedText || parsedText.trim().length === 0) {
-            return res.status(400).json({ message: "Could not extract text. Please ensure it is a readable text-based resume." });
+        // UPLOAD GATE VALIDATION
+        if (!parsedText || parsedText.trim().length < 50) {
+            return res.status(400).json({ 
+                code: "INVALID_RESUME", 
+                message: "We couldn't detect a valid resume in this file. Please upload a text-based PDF or DOCX." 
+            });
+        }
+
+        const lowerText = parsedText.toLowerCase();
+        const hasKeywords = lowerText.includes('experience') || lowerText.includes('education') || lowerText.includes('skills') || lowerText.includes('work') || lowerText.includes('university') || lowerText.includes('school');
+        
+        if (!hasKeywords) {
+            return res.status(400).json({ 
+                code: "INVALID_RESUME", 
+                message: "We couldn't detect a valid resume in this file. It appears to be a different type of document." 
+            });
         }
 
         if (parsedText.length > MAX_TEXT_LENGTH) {
-            return res.status(400).json({ message: `Document is unusually large (${parsedText.length} chars). Please upload a standard resume under 15,000 characters.` });
+            return res.status(400).json({ message: `Document is unusually large (${parsedText.length} chars). Please upload a standard resume.` });
         }
 
         const aiAnalysisResult = await generateResumeAnalysis(parsedText, jobDescription);

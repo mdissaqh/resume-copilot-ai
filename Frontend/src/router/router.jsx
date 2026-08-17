@@ -8,6 +8,7 @@ import ProtectedRoute from "../components/layout/ProtectedRoute";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
 import ViewAnalysisPage from "../features/dashboard/pages/ViewAnalysisPage";
 import BuilderPage from "../features/builder/pages/BuilderPage";
+import CreateResumePage from "../features/builder/pages/CreateResumePage";
 
 export const router = createBrowserRouter([
     {
@@ -29,6 +30,10 @@ export const router = createBrowserRouter([
             {
                 path: "/upload",
                 element: <UploadPage />
+            },
+            {
+                path: "/build",
+                element: <CreateResumePage />
             },
             {
                 path: "/dashboard",

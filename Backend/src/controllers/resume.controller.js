@@ -1,6 +1,6 @@
 import Analysis from "../models/analysis.model.js";
 import Resume from "../models/resume.model.js";
-import { generateStructuredResume } from "../services/ai.service.js";
+import { extractRawResumeJSON, transformAndOptimizeResume } from "../services/ai.service.js";
 
 export const getUserAnalyses = async (req, res) => {
     try {
@@ -41,12 +41,18 @@ export const generateResume = async (req, res) => {
         const analysis = await Analysis.findOne({ _id: analysisId, userId: req.user._id });
         if (!analysis) return res.status(404).json({ success: false, message: "Analysis not found." });
 
-        console.log("Generating structured JSON resume via AI...");
-        const structuredResume = await generateStructuredResume(analysis.extractedText, analysis.jobDescription);
+        console.log("Extracting raw facts and generating optimized JSON via AI...");
+        
+        // Execute both extraction and optimization concurrently for performance
+        const [rawResume, structuredResume] = await Promise.all([
+            extractRawResumeJSON(analysis.extractedText),
+            transformAndOptimizeResume(analysis.extractedText, analysis.jobDescription)
+        ]);
 
         const newResume = await Resume.create({
             userId: req.user._id,
             analysisId: analysis._id,
+            originalContent: rawResume,
             content: structuredResume,
             templateId: "classic"
         });
