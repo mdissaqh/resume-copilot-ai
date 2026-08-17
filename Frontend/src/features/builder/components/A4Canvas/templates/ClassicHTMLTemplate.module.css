@@ -1,0 +1,130 @@
+/* 
+   CLASSIC TEMPLATE STYLES
+   Prioritizes ATS-readability, serif typography, and strict visual hierarchy.
+*/
+
+.document {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11pt;
+    line-height: 1.4;
+    color: #000000;
+}
+
+/*  HEADER  */
+.header {
+    text-align: center;
+    margin-bottom: 16pt;
+}
+
+.name {
+    font-size: 24pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 0 0 4pt 0;
+    line-height: 1.1;
+    letter-spacing: 0.5pt;
+}
+
+.contactInfo {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 6pt;
+    font-size: 10pt;
+    color: #111;
+}
+
+.contactSeparator {
+    color: #666;
+    margin: 0 4pt;
+    user-select: none; /* Prevents ATS from reading the pipe separator */
+}
+
+.link {
+    color: #000000;
+    text-decoration: none;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+/* --- SECTIONS --- */
+.section {
+    margin-bottom: 14pt;
+}
+
+.sectionTitle {
+    font-size: 12pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 1pt solid #000000;
+    margin: 0 0 8pt 0;
+    padding-bottom: 2pt;
+}
+
+/*  BLOCKS (Experience, Education, Projects) */
+/* break-inside: avoid ensures sections aren't awkwardly split across pages when printing */
+.blockItem {
+    margin-bottom: 10pt;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.rowBetween {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 2pt;
+}
+
+.primaryText {
+    font-weight: bold;
+    font-size: 11pt;
+}
+
+.secondaryText {
+    font-style: italic;
+    font-size: 11pt;
+}
+
+.dateLocation {
+    font-weight: normal;
+    text-align: right;
+    white-space: nowrap;
+    margin-left: 10pt;
+}
+
+.paragraph {
+    margin: 4pt 0;
+}
+
+/* LISTS & BULLETS */
+.bulletList {
+    margin: 4pt 0 0 0;
+    padding-left: 16pt;
+    list-style-type: disc;
+}
+
+.bulletItem {
+    margin-bottom: 3pt;
+    padding-left: 2pt;
+}
+
+.skillItem {
+    margin-bottom: 4pt;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.skillCategory {
+    font-weight: bold;
+}
+
+.projectLinks {
+    display: flex;
+    gap: 8pt;
+    font-size: 10pt;
+    margin-top: 2pt;
+}

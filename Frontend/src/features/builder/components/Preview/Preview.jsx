@@ -1,15 +1,14 @@
-import { PDFViewer } from '@react-pdf/renderer';
-import { getTemplate } from '../../pdf/TemplateRegistry';
+import React from 'react';
+import { A4Canvas } from '../A4Canvas/A4Canvas';
 import styles from '../../styles/Preview.module.css';
 
 const Preview = ({ resumeData, templateId }) => {
+    // Replaced @react-pdf/renderer with the new HTML/CSS A4Canvas
     if (!resumeData) return null;
 
     return (
         <div className={styles.previewWrapper}>
-            <PDFViewer style={{ width: '100%', height: '100%', border: 'none' }} className={styles.pdfViewer}>
-                {getTemplate(templateId, resumeData)}
-            </PDFViewer>
+            <A4Canvas resumeData={resumeData} templateId={templateId} />
         </div>
     );
 };

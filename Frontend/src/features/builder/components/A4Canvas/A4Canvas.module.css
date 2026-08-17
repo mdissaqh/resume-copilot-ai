@@ -1,0 +1,55 @@
+.canvasWrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    /* Ensure no horizontal scrolling on the outer wrapper */
+    overflow-x: hidden; 
+}
+
+.a4Page {
+    /* Standard A4 dimensions */
+    width: 210mm;
+    min-height: 297mm;
+    background-color: white;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    /* Standard professional resume margins */
+    padding: 20mm;
+    box-sizing: border-box;
+    /* Smooth transitions for responsive scaling */
+    transition: transform 0.2s ease, width 0.2s ease;
+    /* Ensure content stays within paper */
+    overflow-wrap: break-word;
+}
+
+/* Responsive scaling for screens smaller than A4 (approx 800px) */
+@media (max-width: 850px) {
+    .a4Page {
+        width: 100%;
+        min-height: auto;
+        padding: 15px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+}
+
+/* Base print rules to guarantee exact physical size when Puppeteer/Browser prints */
+@media print {
+    .canvasWrapper {
+        display: block;
+        padding: 0;
+        background: none;
+    }
+    
+    .a4Page {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    @page {
+        size: A4;
+        margin: 20mm;
+    }
+}

@@ -1,19 +1,18 @@
 .previewWrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
+    flex: 1;
     background-color: #e5e7eb;
     position: relative;
-    border-radius: 8px;
-    overflow: hidden;
+    /* Allow the user to scroll through the workspace containing the A4 page */
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    justify-content: center;
+    /* Add padding so the A4 paper doesn't touch the edges of the window */
+    padding: 40px 20px;
+    box-sizing: border-box;
 }
 
-.pdfViewer {
-    flex: 1;
-    background-color: #525659; /* Native PDF viewer background */
-}
-
+/* Fallback loading/updating UI states */
 .loadingState {
     display: flex;
     flex-direction: column;
@@ -52,5 +51,6 @@
 @media (max-width: 768px) {
     .previewWrapper {
         min-height: calc(100vh - 120px);
+        padding: 20px 10px;
     }
 }
