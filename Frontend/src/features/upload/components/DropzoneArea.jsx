@@ -9,7 +9,7 @@ import { useAuth } from "../../auth/hooks/useAuth";
 export const DropzoneArea = () => {
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
-    
+
     const [selectedFile, setSelectedFile] = useState(null);
     const [hasJobDescription, setHasJobDescription] = useState(null);
     const [jobDescription, setJobDescription] = useState("");
@@ -46,6 +46,8 @@ export const DropzoneArea = () => {
         return styles.dropzone;
     };
 
+    const [activeResumeId, setActiveResumeId] = useState(null);
+
     const handleProceed = async () => {
         setIsAnalyzing(true);
         setError(null);
@@ -55,7 +57,9 @@ export const DropzoneArea = () => {
             const response = await analyzeResumeApi(selectedFile, jobDescription);
             setAnalysisResult(response.analysis);
 
-            if (!isAuthenticated) {
+            if (response.resumeId) {
+                setActiveResumeId(response.resumeId);
+            } else if (!isAuthenticated) {
                 const guestData = {
                     extractedText: response.parsedText,
                     jobDescription: jobDescription,
@@ -82,10 +86,21 @@ export const DropzoneArea = () => {
         setError(null);
         setErrorCode(null);
         setAnalysisResult(null);
+        setActiveResumeId(null);
     };
 
     if (analysisResult) {
-        return <AnalysisResults analysis={analysisResult} onReset={handleReset} onNavigateToBuilder={(section) => navigate(`/build/placeholder?focus=${section}`)} />;
+        return <AnalysisResults
+            analysis={analysisResult}
+            onReset={handleReset}
+            onNavigateToBuilder={(section) => {
+                if (activeResumeId) {
+                    navigate(`/build/${activeResumeId}?focus=${section}`);
+                } else {
+                    navigate(`/build?focus=${section}`);
+                }
+            }}
+        />;
     }
 
     if (errorCode === "INVALID_RESUME") {
@@ -125,7 +140,7 @@ export const DropzoneArea = () => {
                 )}
                 <p className={styles.fileTypes}>PDF or DOCX only</p>
             </div>
-            
+
             {error && !errorCode && (
                 <div style={{ marginTop: '20px', color: '#d93025', background: '#fff0f0', padding: '12px', borderRadius: '8px', border: '1px solid #facdcd', width: '100%', maxWidth: '500px', textAlign: 'left' }}>
                     {error}

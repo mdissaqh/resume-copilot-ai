@@ -1,0 +1,228 @@
+.overlayContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 999;
+}
+
+.desktopPopover {
+  position: absolute;
+  width: 280px;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+  pointer-events: auto;
+  transition: top 0.15s ease, left 0.15s ease;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.popoverHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sparkle {
+  color: #2563eb;
+}
+
+.headerTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  border-radius: 4px;
+}
+
+.closeBtn:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.messageText {
+  font-size: 0.85rem;
+  color: #334155;
+  margin: 0 0 10px 0;
+  line-height: 1.4;
+}
+
+.actionRow {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.btnYes {
+  flex: 1;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btnYes:hover {
+  background: #dbeafe;
+}
+
+.btnNo {
+  flex: 1;
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btnNo:hover {
+  background: #f1f5f9;
+}
+
+.diffBox {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.diffOriginal {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  text-decoration: line-through;
+  margin-bottom: 4px;
+}
+
+.diffProposed {
+  font-size: 0.82rem;
+  color: #166534;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.btnAccept {
+  flex: 1;
+  background: #16a34a;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.btnAccept:hover {
+  background: #15803d;
+}
+
+.btnEdit {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btnReject {
+  background: none;
+  color: #64748b;
+  border: none;
+  padding: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.editWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.editTextarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 0.82rem;
+  min-height: 50px;
+  box-sizing: border-box;
+}
+
+.textInput {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+}
+
+/* Anchored Mobile Sheet for viewports <= 600px */
+.mobileSheet {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  background: #ffffff;
+  border: 1.5px solid #2563eb;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+  z-index: 1000;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

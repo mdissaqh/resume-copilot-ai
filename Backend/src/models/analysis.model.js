@@ -6,6 +6,11 @@ const analysisSchema = new mongoose.Schema({
         ref: "User",
         required: true
     },
+    resumeId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Resume",
+        default: null
+    },
     title: {
         type: String,
         default: "Untitled Resume Analysis"

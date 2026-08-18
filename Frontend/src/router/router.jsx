@@ -53,11 +53,7 @@ export const router = createBrowserRouter([
             },
             {
                 path: "/build/:id",
-                element: (
-                    <ProtectedRoute>
-                        <BuilderPage />
-                    </ProtectedRoute>
-                )
+                element: <BuilderPage />
             }
         ]
     }

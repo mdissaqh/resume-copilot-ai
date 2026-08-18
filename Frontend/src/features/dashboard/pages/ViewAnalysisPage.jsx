@@ -28,7 +28,8 @@ const ViewAnalysisPage = () => {
 
     // This handles the deep-linking from the Analysis actionable buttons
     const handleNavigateToBuilder = (sectionId) => {
-        navigate(`/build/${id}?focus=${sectionId}`);
+        const targetResumeId = analysisData?.resumeId || id;
+        navigate(`/build/${targetResumeId}?focus=${sectionId}`);
     };
 
     if (loading) return <div className={styles.loader}>Loading analysis...</div>;

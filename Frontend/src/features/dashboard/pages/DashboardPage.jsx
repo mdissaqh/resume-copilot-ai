@@ -15,7 +15,7 @@ const DashboardPage = () => {
             try {
                 const data = await getUserAnalysesApi();
                 setAnalyses(data.analyses || []);
-            } catch (err) {
+            } catch {
                 setError("Unable to load your analyses. Try again.");
             } finally {
                 setLoading(false);
@@ -62,7 +62,7 @@ const DashboardPage = () => {
                             </div>
                             <div className={styles.buttonGroup}>
                                 <Link to={`/dashboard/analysis/${item._id}`} className={styles.viewButton}>View Analysis</Link>
-                                <Link to={`/build/${item._id}`} className={styles.buildButton}>Build Resume</Link>
+                                <Link to={`/build/${item.resumeId || item._id}`} className={styles.buildButton}>Build Resume</Link>
                             </div>
                         </div>
                     ))}

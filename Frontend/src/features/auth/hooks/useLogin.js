@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { loginUserApi } from "../api/auth.api";
 import { useAuth } from "./useAuth";
-import { useNavigate } from "react-router-dom" 
+import { useNavigate } from "react-router-dom";
+import { handlePostAuthNavigation } from "../../../utils/postAuthMigration";
 
 export const useLogin = () => {
     const [loading, setLoading] = useState(false);
@@ -15,7 +16,7 @@ export const useLogin = () => {
         try {
             const data = await loginUserApi(credentials);
             login(data.user);
-            navigate("/upload");
+            await handlePostAuthNavigation(navigate);
             return data;
         } catch (err) {
             const errorMessage = err.response?.data?.message || "Login failed. Please try again.";
