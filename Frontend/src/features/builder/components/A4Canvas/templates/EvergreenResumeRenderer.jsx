@@ -1,7 +1,8 @@
 import React from 'react';
 import { SmartEditable, SmartLinkEditable } from '../../SmartEditable/SmartEditable';
+import { SectionWrapper } from '../SectionWrapper';
 import { useResumeStore } from '../../../../../store/useResumeStore';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Calendar, Link as LinkIcon } from 'lucide-react';
 import { generateId } from '../../../../../utils/idGenerator';
 import styles from './EvergreenResumeRenderer.module.css';
 
@@ -27,26 +28,58 @@ const getDensityClass = (data) => {
 export const generateEvergreenBlocks = (data) => {
     if (!data) return [];
 
-    const { addArrayItem, removeArrayItem } = useResumeStore.getState();
     const {
-        personalInfo, professionalSummary, experience, projects,
-        education, skills, certifications, additionalSections, metadata
+        addArrayItem,
+        removeArrayItem,
+        updateField,
+        getSectionOrder,
+        moveSectionUp,
+        moveSectionDown,
+        deleteSection
+    } = useResumeStore.getState();
+
+    const {
+        personalInfo,
+        professionalSummary,
+        experience,
+        projects,
+        education,
+        skills,
+        certifications,
+        additionalSections
     } = data;
 
-    const persona = metadata?.persona || 'experienced';
     const densityClass = getDensityClass(data);
     const blocks = [];
+    const sectionOrder = getSectionOrder();
 
     // --- HEADER BLOCK ---
     const contactItems = [];
-    contactItems.push(<SmartEditable key="email" inline path={['personalInfo', 'email']} text={personalInfo?.email} placeholder="email@example.com" />);
-    contactItems.push(<SmartEditable key="phone" inline path={['personalInfo', 'phone']} text={personalInfo?.phone} placeholder="+1 234 567 8900" />);
-    contactItems.push(<SmartEditable key="location" inline path={['personalInfo', 'location']} text={personalInfo?.location} placeholder="City, Country" />);
+    contactItems.push(
+        <div key="email" className={styles.contactItem}>
+            <SmartEditable inline path={['personalInfo', 'email']} text={personalInfo?.email} placeholder="email@example.com" />
+        </div>
+    );
+    contactItems.push(
+        <div key="phone" className={styles.contactItem}>
+            <SmartEditable inline path={['personalInfo', 'phone']} text={personalInfo?.phone} placeholder="+1 234 567 8900" />
+        </div>
+    );
+    contactItems.push(
+        <div key="location" className={styles.contactItem}>
+            <SmartEditable inline path={['personalInfo', 'location']} text={personalInfo?.location} placeholder="City, Country" />
+        </div>
+    );
 
-    if (personalInfo?.links && personalInfo.links.length > 0) {
+    if (Array.isArray(personalInfo?.links) && personalInfo.links.length > 0) {
         personalInfo.links.forEach((link, idx) => {
             contactItems.push(
-                <SmartLinkEditable key={`link-${idx}`} path={['personalInfo', 'links', idx]} label={link.platform || link.url} url={link.url} className={styles.link} />
+                <div key={`link-${idx}`} className={styles.contactItem}>
+                    <SmartLinkEditable path={['personalInfo', 'links', idx]} label={link?.platform || link?.url} url={link?.url} className={styles.link} />
+                    <button className={styles.iconBtnDanger} style={{ marginLeft: 4 }} onClick={() => removeArrayItem(['personalInfo', 'links'], idx)} title="Remove link">
+                        <Trash2 size={10} />
+                    </button>
+                </div>
             );
         });
     }
@@ -60,276 +93,318 @@ export const generateEvergreenBlocks = (data) => {
                     <SmartEditable path={['personalInfo', 'fullName']} text={personalInfo?.fullName} placeholder="YOUR FULL NAME" />
                 </h1>
                 <div className={styles.contactInfo}>
-                    {contactItems.map((item, index) => (
-                        <React.Fragment key={index}>
-                            {item}
-                            {index < contactItems.length - 1 && <span className={styles.contactSeparator} aria-hidden="true">|</span>}
-                        </React.Fragment>
-                    ))}
-                    <button className={styles.addBtn} onClick={() => addArrayItem(['personalInfo', 'links'], { platform: 'LinkedIn', url: '' })}>
-                        <Plus size={12} /> Add Link
-                    </button>
+                    {contactItems}
                 </div>
             </header>
         )
     });
 
-    // --- SUMMARY BLOCK ---
-    if (professionalSummary !== undefined) {
-        blocks.push({
-            id: 'summary-title',
-            type: 'section-title',
-            content: <h2 className={styles.sectionTitle}>Professional Summary</h2>
-        });
-        blocks.push({
-            id: 'summary-content',
+    // --- SUMMARY SECTION ---
+    const renderSummaryBlocks = () => {
+        const hasSummary = professionalSummary !== undefined && professionalSummary !== null;
+        if (!hasSummary && professionalSummary === '') return [];
+
+        return [{
+            id: 'section-summary',
             type: 'content',
             content: (
-                <div className={`${styles.paragraph} ${densityClass}`} data-node-id="professionalSummary">
-                    <SmartEditable type="multiline" path={['professionalSummary']} text={professionalSummary} placeholder="Add a compelling professional summary highlighting your key strengths..." />
-                </div>
+                <SectionWrapper
+                    sectionKey="summary"
+                    title="Professional Summary"
+                    onMoveUp={() => moveSectionUp('summary')}
+                    onMoveDown={() => moveSectionDown('summary')}
+                    onDelete={() => deleteSection('summary')}
+                >
+                    <h2 className={styles.sectionTitle}>Professional Summary</h2>
+                    <div className={`${styles.paragraph} ${densityClass}`} data-node-id="professionalSummary">
+                        <SmartEditable type="multiline" path={['professionalSummary']} text={professionalSummary} placeholder="Add a compelling professional summary highlighting your key strengths..." />
+                    </div>
+                </SectionWrapper>
+            )
+        }];
+    };
+
+    // --- EXPERIENCE SECTION ---
+    const renderExperienceBlocks = () => {
+        const hasItems = experience && experience.length > 0;
+        const res = [];
+
+        res.push({
+            id: 'title-experience',
+            type: 'section-title',
+            content: (
+                <SectionWrapper
+                    sectionKey="experience"
+                    title="Experience"
+                    onMoveUp={() => moveSectionUp('experience')}
+                    onMoveDown={() => moveSectionDown('experience')}
+                    onDelete={() => deleteSection('experience')}
+                    isEmpty={!hasItems}
+                >
+                    <h2 className={styles.sectionTitle}>Professional Experience</h2>
+                    {!hasItems && (
+                        <div className={styles.emptyPlaceholder} onClick={() => addArrayItem(['experience'], { _id: generateId(), role: '', organization: '', achievements: [''] })}>
+                            <Plus size={14} /> Add Experience
+                        </div>
+                    )}
+                </SectionWrapper>
             )
         });
-    }
 
-    // SECTION BUILDERS WITH NODE ANNOTATIONS AND FLEX DATE ALIGNMENT
-    const renderExperienceSection = () => {
-        const sectionBlocks = [];
-        sectionBlocks.push({
-            id: 'exp-title',
-            type: 'section-title',
-            content: <h2 className={styles.sectionTitle}>Professional Experience</h2>
-        });
-
-        if (experience && experience.length > 0) {
+        if (hasItems) {
             experience.forEach((exp, idx) => {
                 const expId = exp._id || `exp-${idx}`;
-                sectionBlocks.push({
-                    id: `exp-header-${expId}`,
-                    type: 'block-header',
+
+                res.push({
+                    id: `exp-${expId}`,
+                    type: 'block-item',
                     content: (
                         <div className={`${styles.blockItem} ${densityClass}`} data-node-id={expId}>
                             <div className={styles.inlineControls}>
-                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['experience'], idx)}><Trash2 size={13} /></button>
+                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['experience'], idx)} title="Delete role"><Trash2 size={13} /></button>
                             </div>
                             <div className={styles.rowBetween}>
-                                <div className={styles.primaryText}>
-                                    <SmartEditable path={['experience', idx, 'role']} text={exp.role} placeholder="Job Title" />
-                                </div>
-                                <div className={styles.dateLocation}>
-                                    <SmartEditable inline path={['experience', idx, 'startDate']} text={exp.startDate} placeholder="Start Date" />
-                                    <span> – </span>
-                                    <SmartEditable inline path={['experience', idx, 'endDate']} text={exp.endDate} placeholder="End Date" />
-                                </div>
-                            </div>
-                            <div className={styles.rowBetween}>
-                                <div className={styles.secondaryText}>
-                                    <SmartEditable path={['experience', idx, 'organization']} text={exp.organization} placeholder="Company Name" />
-                                </div>
-                                {exp.location !== undefined && (
-                                    <div className={styles.dateLocation}>
-                                        <SmartEditable inline path={['experience', idx, 'location']} text={exp.location} placeholder="Location" />
+                                <div className={styles.leftCol}>
+                                    <div className={styles.primaryText}>
+                                        <SmartEditable path={['experience', idx, 'role']} text={exp.role} placeholder="Job Title" />
                                     </div>
-                                )}
+                                    <div className={styles.secondaryText}>
+                                        <SmartEditable path={['experience', idx, 'organization']} text={exp.organization} placeholder="Company Name" />
+                                    </div>
+                                </div>
+                                <div className={styles.rightCol}>
+                                    <div className={styles.dateLocation}>
+                                        <SmartEditable inline path={['experience', idx, 'startDate']} text={exp.startDate} placeholder="2020 – Present" />
+                                    </div>
+                                    {exp.location && (
+                                        <div className={styles.dateLocation}>
+                                            <SmartEditable inline path={['experience', idx, 'location']} text={exp.location} placeholder="Location" />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             {exp.description && (
                                 <div className={styles.paragraph}>
-                                    <SmartEditable type="multiline" path={['experience', idx, 'description']} text={exp.description} placeholder="Optional role overview..." />
+                                    <SmartEditable type="multiline" path={['experience', idx, 'description']} text={exp.description} placeholder="Role overview..." />
                                 </div>
                             )}
+                            {exp.achievements?.map((ach, jdx) => (
+                                <div key={`exp-bullet-${jdx}`} className={`${styles.bulletItem} ${densityClass}`} data-node-id={`${expId}-bullet-${jdx}`}>
+                                    <span className={styles.bulletPoint}>•</span>
+                                    <div className={styles.bulletContent}>
+                                        <SmartEditable
+                                            type="multiline"
+                                            path={['experience', idx, 'achievements', jdx]}
+                                            text={ach}
+                                            placeholder="Describe a measurable impact (Backspace when empty to remove)..."
+                                            onBackspaceEmpty={() => removeArrayItem(['experience', idx, 'achievements'], jdx)}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                            <button className={styles.addBtn} onClick={() => addArrayItem(['experience', idx, 'achievements'], '')}>
+                                <Plus size={12} /> Add Bullet
+                            </button>
                         </div>
                     )
                 });
-
-                exp.achievements?.forEach((ach, jdx) => {
-                    const bulletNodeId = `${expId}-bullet-${jdx}`;
-                    sectionBlocks.push({
-                        id: `exp-ach-${expId}-${jdx}`,
-                        type: 'bullet',
-                        content: (
-                            <li className={`${styles.bulletItem} ${densityClass}`} data-node-id={bulletNodeId}>
-                                <span className={styles.bulletPoint}>•</span>
-                                <div className={styles.bulletContent}>
-                                    <SmartEditable
-                                        type="multiline"
-                                        path={['experience', idx, 'achievements', jdx]}
-                                        text={ach}
-                                        placeholder="Describe a measurable impact..."
-                                        onBackspaceEmpty={() => removeArrayItem(['experience', idx, 'achievements'], jdx)}
-                                    />
-                                </div>
-                            </li>
-                        )
-                    });
-                });
-
-                sectionBlocks.push({
-                    id: `exp-addbul-${expId}`,
-                    type: 'control',
-                    content: (
-                        <button className={styles.addBtn} onClick={() => addArrayItem(['experience', idx, 'achievements'], '')}>
-                            <Plus size={12} /> Add Bullet
-                        </button>
-                    )
-                });
             });
 
-            sectionBlocks.push({
-                id: 'exp-add-btn',
+            res.push({
+                id: 'add-experience-btn',
                 type: 'control',
                 content: (
-                    <button className={styles.addBtn} style={{ marginBottom: '12pt' }} onClick={() => addArrayItem(['experience'], { _id: generateId(), role: '', organization: '', achievements: [''] })}>
-                        <Plus size={12} /> Add Experience
-                    </button>
-                )
-            });
-        } else {
-            sectionBlocks.push({
-                id: 'exp-empty-state',
-                type: 'control',
-                content: (
-                    <button className={styles.emptySectionPlaceholder} onClick={() => addArrayItem(['experience'], { _id: generateId(), role: '', organization: '', achievements: [''] })}>
-                        <Plus size={14} /> Add Experience
+                    <button className={styles.addBtn} style={{ marginTop: 4, marginBottom: 8 }} onClick={() => addArrayItem(['experience'], { _id: generateId(), role: '', organization: '', achievements: [''] })}>
+                        <Plus size={12} /> Add Role
                     </button>
                 )
             });
         }
-        return sectionBlocks;
+
+        return res;
     };
 
-    const renderProjectsSection = () => {
-        const sectionBlocks = [];
-        sectionBlocks.push({
-            id: 'proj-title',
+    // --- PROJECTS SECTION (TITLE -> LIVE DEMO -> GITHUB -> DATE) ---
+    const renderProjectsBlocks = () => {
+        const hasItems = projects && projects.length > 0;
+        const res = [];
+
+        res.push({
+            id: 'title-projects',
             type: 'section-title',
-            content: <h2 className={styles.sectionTitle}>Projects</h2>
+            content: (
+                <SectionWrapper
+                    sectionKey="projects"
+                    title="Projects"
+                    onMoveUp={() => moveSectionUp('projects')}
+                    onMoveDown={() => moveSectionDown('projects')}
+                    onDelete={() => deleteSection('projects')}
+                    isEmpty={!hasItems}
+                >
+                    <h2 className={styles.sectionTitle}>Projects</h2>
+                    {!hasItems && (
+                        <div className={styles.emptyPlaceholder} onClick={() => addArrayItem(['projects'], { _id: generateId(), title: '', highlights: [''] })}>
+                            <Plus size={14} /> Add Project
+                        </div>
+                    )}
+                </SectionWrapper>
+            )
         });
 
-        if (projects && projects.length > 0) {
+        if (hasItems) {
             projects.forEach((proj, idx) => {
                 const projId = proj._id || `proj-${idx}`;
-                sectionBlocks.push({
-                    id: `proj-header-${projId}`,
-                    type: 'block-header',
+
+                res.push({
+                    id: `proj-${projId}`,
+                    type: 'block-item',
                     content: (
                         <div className={`${styles.blockItem} ${densityClass}`} data-node-id={projId}>
                             <div className={styles.inlineControls}>
-                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['projects'], idx)}><Trash2 size={13} /></button>
+                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['projects'], idx)} title="Delete project"><Trash2 size={13} /></button>
                             </div>
                             <div className={styles.rowBetween}>
-                                <div className={styles.primaryText}>
-                                    <SmartEditable path={['projects', idx, 'title']} text={proj.title} placeholder="Project Title" />
+                                <div className={styles.leftCol} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', flex: 1 }}>
+                                    <div className={styles.primaryText}>
+                                        <SmartEditable path={['projects', idx, 'title']} text={proj.title} placeholder="Project Title" />
+                                    </div>
+                                    <div className={styles.projectLinks} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                        {proj.liveUrl ? (
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                                <SmartLinkEditable path={['projects', idx]} label={proj.liveLabel || 'Live Demo'} url={proj.liveUrl} className={styles.link} />
+                                                <button className={styles.iconBtnDanger} style={{ padding: 1 }} onClick={() => updateField(['projects', idx, 'liveUrl'], '')} title="Delete Live Demo link">
+                                                    <Trash2 size={10} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button className={styles.addBtn} style={{ fontSize: '7.5pt' }} onClick={() => updateField(['projects', idx, 'liveUrl'], 'https://demo.com')}>
+                                                <LinkIcon size={10} /> + Live Demo
+                                            </button>
+                                        )}
+
+                                        {proj.githubUrl ? (
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                                <SmartLinkEditable path={['projects', idx]} label={proj.githubLabel || 'GitHub'} url={proj.githubUrl} className={styles.link} />
+                                                <button className={styles.iconBtnDanger} style={{ padding: 1 }} onClick={() => updateField(['projects', idx, 'githubUrl'], '')} title="Delete GitHub link">
+                                                    <Trash2 size={10} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button className={styles.addBtn} style={{ fontSize: '7.5pt' }} onClick={() => updateField(['projects', idx, 'githubUrl'], 'https://github.com')}>
+                                                <LinkIcon size={10} /> + GitHub
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className={styles.dateLocation}>
-                                    <SmartEditable inline path={['projects', idx, 'date']} text={proj.date} placeholder="Date" />
+                                <div className={styles.rightCol}>
+                                    {proj.date ? (
+                                        <div className={styles.dateLocation}>
+                                            <SmartEditable inline path={['projects', idx, 'date']} text={proj.date} placeholder="Date" />
+                                        </div>
+                                    ) : (
+                                        <button className={styles.addBtn} style={{ fontSize: '7.5pt' }} onClick={() => updateField(['projects', idx, 'date'], '2024')}>
+                                            <Calendar size={10} /> + Add Date
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                            <div className={styles.rowBetween}>
-                                <div className={styles.secondaryText}>
-                                    <SmartEditable path={['projects', idx, 'description']} text={proj.description} placeholder="Brief project description..." />
-                                </div>
-                                <div className={styles.projectLinks}>
-                                    <SmartLinkEditable path={['projects', idx]} label="GitHub" url={proj.githubUrl} className={styles.link} />
-                                    <SmartLinkEditable path={['projects', idx]} label="Live Demo" url={proj.liveUrl} className={styles.link} />
-                                </div>
+                            <div className={styles.secondaryText} style={{ marginTop: 2, width: '100%' }}>
+                                <SmartEditable type="multiline" path={['projects', idx, 'description']} text={proj.description} placeholder="Brief project description..." />
                             </div>
+                            {proj.highlights?.map((hl, jdx) => (
+                                <div key={`proj-hl-${jdx}`} className={`${styles.bulletItem} ${densityClass}`} data-node-id={`${projId}-hl-${jdx}`}>
+                                    <span className={styles.bulletPoint}>•</span>
+                                    <div className={styles.bulletContent}>
+                                        <SmartEditable
+                                            type="multiline"
+                                            path={['projects', idx, 'highlights', jdx]}
+                                            text={hl}
+                                            placeholder="Add key technical accomplishment (Backspace when empty to remove)..."
+                                            onBackspaceEmpty={() => removeArrayItem(['projects', idx, 'highlights'], jdx)}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                            <button className={styles.addBtn} onClick={() => addArrayItem(['projects'], idx, 'highlights', '')}>
+                                <Plus size={12} /> Add Highlight
+                            </button>
                         </div>
-                    )
-                });
-
-                proj.highlights?.forEach((hl, jdx) => {
-                    const highlightNodeId = `${projId}-hl-${jdx}`;
-                    sectionBlocks.push({
-                        id: `proj-hl-${projId}-${jdx}`,
-                        type: 'bullet',
-                        content: (
-                            <li className={`${styles.bulletItem} ${densityClass}`} data-node-id={highlightNodeId}>
-                                <span className={styles.bulletPoint}>•</span>
-                                <div className={styles.bulletContent}>
-                                    <SmartEditable
-                                        type="multiline"
-                                        path={['projects', idx, 'highlights', jdx]}
-                                        text={hl}
-                                        placeholder="Add key technical accomplishment..."
-                                        onBackspaceEmpty={() => removeArrayItem(['projects', idx, 'highlights'], jdx)}
-                                    />
-                                </div>
-                            </li>
-                        )
-                    });
-                });
-
-                sectionBlocks.push({
-                    id: `proj-addbul-${projId}`,
-                    type: 'control',
-                    content: (
-                        <button className={styles.addBtn} onClick={() => addArrayItem(['projects', idx, 'highlights'], '')}>
-                            <Plus size={12} /> Add Highlight
-                        </button>
                     )
                 });
             });
 
-            sectionBlocks.push({
-                id: 'proj-add-btn',
+            res.push({
+                id: 'add-project-btn',
                 type: 'control',
                 content: (
-                    <button className={styles.addBtn} style={{ marginBottom: '12pt' }} onClick={() => addArrayItem(['projects'], { _id: generateId(), title: '', highlights: [''] })}>
+                    <button className={styles.addBtn} style={{ marginTop: 4, marginBottom: 8 }} onClick={() => addArrayItem(['projects'], { _id: generateId(), title: '', highlights: [''] })}>
                         <Plus size={12} /> Add Project
                     </button>
                 )
             });
-        } else {
-            sectionBlocks.push({
-                id: 'proj-empty-state',
-                type: 'control',
-                content: (
-                    <button className={styles.emptySectionPlaceholder} onClick={() => addArrayItem(['projects'], { _id: generateId(), title: '', highlights: [''] })}>
-                        <Plus size={14} /> Add Project
-                    </button>
-                )
-            });
         }
-        return sectionBlocks;
+
+        return res;
     };
 
-    const renderEducationSection = () => {
-        const sectionBlocks = [];
-        sectionBlocks.push({
-            id: 'edu-title',
+    // --- EDUCATION SECTION ---
+    const renderEducationBlocks = () => {
+        const hasItems = education && education.length > 0;
+        const res = [];
+
+        res.push({
+            id: 'title-education',
             type: 'section-title',
-            content: <h2 className={styles.sectionTitle}>Education</h2>
+            content: (
+                <SectionWrapper
+                    sectionKey="education"
+                    title="Education"
+                    onMoveUp={() => moveSectionUp('education')}
+                    onMoveDown={() => moveSectionDown('education')}
+                    onDelete={() => deleteSection('education')}
+                    isEmpty={!hasItems}
+                >
+                    <h2 className={styles.sectionTitle}>Education</h2>
+                    {!hasItems && (
+                        <div className={styles.emptyPlaceholder} onClick={() => addArrayItem(['education'], { _id: generateId(), institution: '', degree: '' })}>
+                            <Plus size={14} /> Add Education
+                        </div>
+                    )}
+                </SectionWrapper>
+            )
         });
 
-        if (education && education.length > 0) {
+        if (hasItems) {
             education.forEach((edu, idx) => {
                 const eduId = edu._id || `edu-${idx}`;
-                sectionBlocks.push({
-                    id: `edu-item-${eduId}`,
-                    type: 'content',
+                const degreeValue = edu.degree || '';
+
+                res.push({
+                    id: `edu-${eduId}`,
+                    type: 'block-item',
                     content: (
                         <div className={`${styles.blockItem} ${densityClass}`} data-node-id={eduId}>
                             <div className={styles.inlineControls}>
-                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['education'], idx)}><Trash2 size={13} /></button>
+                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['education'], idx)} title="Delete item"><Trash2 size={13} /></button>
                             </div>
                             <div className={styles.rowBetween}>
-                                <div className={styles.primaryText}>
-                                    <SmartEditable path={['education', idx, 'institution']} text={edu.institution} placeholder="University / Institution" />
+                                <div className={styles.leftCol} style={{ flex: '0 1 75%' }}>
+                                    <div className={styles.primaryText}>
+                                        <SmartEditable path={['education', idx, 'institution']} text={edu.institution} placeholder="University / Institution" />
+                                    </div>
+                                    <div className={styles.secondaryText}>
+                                        <SmartEditable path={['education', idx, 'degree']} text={degreeValue} placeholder="Degree, Field of Study & Score (e.g. B.E in CSE • 8.5 CGPA)" />
+                                    </div>
                                 </div>
-                                <div className={styles.dateLocation}>
-                                    <SmartEditable inline path={['education', idx, 'location']} text={edu.location} placeholder="Location" />
-                                </div>
-                            </div>
-                            <div className={styles.rowBetween}>
-                                <div>
-                                    <SmartEditable inline path={['education', idx, 'degree']} text={edu.degree} placeholder="Degree" />
-                                    <span> in </span>
-                                    <SmartEditable inline path={['education', idx, 'fieldOfStudy']} text={edu.fieldOfStudy} placeholder="Field of Study" />
-                                </div>
-                                <div className={styles.dateLocation}>
-                                    <SmartEditable inline path={['education', idx, 'startDate']} text={edu.startDate} placeholder="Start Date" />
-                                    <span> – </span>
-                                    <SmartEditable inline path={['education', idx, 'endDate']} text={edu.endDate} placeholder="Graduation Date" />
+                                <div className={styles.rightCol}>
+                                    <div className={styles.dateLocation}>
+                                        <SmartEditable inline path={['education', idx, 'startDate']} text={edu.startDate} placeholder="2020 – 2024" />
+                                    </div>
+                                    {edu.location && (
+                                        <div className={styles.dateLocation}>
+                                            <SmartEditable inline path={['education', idx, 'location']} text={edu.location} placeholder="Location" />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -337,53 +412,63 @@ export const generateEvergreenBlocks = (data) => {
                 });
             });
 
-            sectionBlocks.push({
-                id: 'edu-add-btn',
+            res.push({
+                id: 'add-education-btn',
                 type: 'control',
                 content: (
-                    <button className={styles.addBtn} style={{ marginBottom: '12pt' }} onClick={() => addArrayItem(['education'], { _id: generateId(), institution: '', degree: '' })}>
-                        <Plus size={12} /> Add Education
-                    </button>
-                )
-            });
-        } else {
-            sectionBlocks.push({
-                id: 'edu-empty-state',
-                type: 'control',
-                content: (
-                    <button className={styles.emptySectionPlaceholder} onClick={() => addArrayItem(['education'], { _id: generateId(), institution: '', degree: '' })}>
-                        <Plus size={14} /> Add Education
+                    <button className={styles.addBtn} style={{ marginTop: 4, marginBottom: 8 }} onClick={() => addArrayItem(['education'], { _id: generateId(), institution: '', degree: '' })}>
+                        <Plus size={12} /> Add Education Item
                     </button>
                 )
             });
         }
-        return sectionBlocks;
+
+        return res;
     };
 
-    const renderSkillsSection = () => {
-        const sectionBlocks = [];
-        sectionBlocks.push({
-            id: 'skills-title',
+    // --- SKILLS SECTION ---
+    const renderSkillsBlocks = () => {
+        const hasItems = skills && skills.length > 0;
+        const res = [];
+
+        res.push({
+            id: 'title-skills',
             type: 'section-title',
-            content: <h2 className={styles.sectionTitle}>Skills</h2>
+            content: (
+                <SectionWrapper
+                    sectionKey="skills"
+                    title="Skills"
+                    onMoveUp={() => moveSectionUp('skills')}
+                    onMoveDown={() => moveSectionDown('skills')}
+                    onDelete={() => deleteSection('skills')}
+                    isEmpty={!hasItems}
+                >
+                    <h2 className={styles.sectionTitle}>Skills</h2>
+                    {!hasItems && (
+                        <div className={styles.emptyPlaceholder} onClick={() => addArrayItem(['skills'], { _id: generateId(), category: 'Core Skills', items: [] })}>
+                            <Plus size={14} /> Add Skills Category
+                        </div>
+                    )}
+                </SectionWrapper>
+            )
         });
 
-        if (skills && skills.length > 0) {
+        if (hasItems) {
             skills.forEach((skillGroup, idx) => {
                 const skillId = skillGroup._id || `skill-${idx}`;
-                sectionBlocks.push({
-                    id: `skill-item-${skillId}`,
-                    type: 'content',
+                res.push({
+                    id: `skill-${skillId}`,
+                    type: 'block-item',
                     content: (
                         <div className={`${styles.skillItem} ${densityClass}`} data-node-id={skillId}>
                             <div className={styles.inlineControls}>
-                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['skills'], idx)}><Trash2 size={13} /></button>
+                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['skills'], idx)} title="Delete category"><Trash2 size={13} /></button>
                             </div>
                             <div className={styles.skillCategory}>
                                 <SmartEditable path={['skills', idx, 'category']} text={skillGroup.category} placeholder="Category" />
                                 <span>:</span>
                             </div>
-                            <div style={{ flex: 1 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
                                 <SmartEditable
                                     type="multiline"
                                     path={['skills', idx, 'items']}
@@ -396,160 +481,203 @@ export const generateEvergreenBlocks = (data) => {
                 });
             });
 
-            sectionBlocks.push({
-                id: 'skills-add-btn',
+            res.push({
+                id: 'add-skill-btn',
                 type: 'control',
                 content: (
-                    <button className={styles.addBtn} style={{ marginBottom: '12pt' }} onClick={() => addArrayItem(['skills'], { _id: generateId(), category: 'New Category', items: [] })}>
+                    <button className={styles.addBtn} style={{ marginTop: 4, marginBottom: 8 }} onClick={() => addArrayItem(['skills'], { _id: generateId(), category: 'New Category', items: [] })}>
                         <Plus size={12} /> Add Skill Category
                     </button>
                 )
             });
-        } else {
-            sectionBlocks.push({
-                id: 'skills-empty-state',
-                type: 'control',
-                content: (
-                    <button className={styles.emptySectionPlaceholder} onClick={() => addArrayItem(['skills'], { _id: generateId(), category: 'Core Skills', items: [] })}>
-                        <Plus size={14} /> Add Skills
-                    </button>
-                )
-            });
         }
-        return sectionBlocks;
+
+        return res;
     };
 
-    const renderCertificationsSection = () => {
-        const sectionBlocks = [];
-        sectionBlocks.push({
-            id: 'certs-title',
+    // --- CERTIFICATIONS SECTION (EDITABLE LINK LABEL & TRASH BUTTON) ---
+    const renderCertificationsBlocks = () => {
+        const hasItems = certifications && certifications.length > 0;
+        const res = [];
+
+        res.push({
+            id: 'title-certifications',
             type: 'section-title',
-            content: <h2 className={styles.sectionTitle}>Certifications</h2>
+            content: (
+                <SectionWrapper
+                    sectionKey="certifications"
+                    title="Certifications"
+                    onMoveUp={() => moveSectionUp('certifications')}
+                    onMoveDown={() => moveSectionDown('certifications')}
+                    onDelete={() => deleteSection('certifications')}
+                    isEmpty={!hasItems}
+                >
+                    <h2 className={styles.sectionTitle}>Certifications</h2>
+                    {!hasItems && (
+                        <div className={styles.emptyPlaceholder} onClick={() => addArrayItem(['certifications'], { _id: generateId(), name: '', issuer: '' })}>
+                            <Plus size={14} /> Add Certification
+                        </div>
+                    )}
+                </SectionWrapper>
+            )
         });
 
-        if (certifications && certifications.length > 0) {
+        if (hasItems) {
             certifications.forEach((cert, idx) => {
                 const certId = cert._id || `cert-${idx}`;
-                sectionBlocks.push({
-                    id: `cert-item-${certId}`,
-                    type: 'block-header',
+                res.push({
+                    id: `cert-${certId}`,
+                    type: 'block-item',
                     content: (
                         <div className={`${styles.blockItem} ${densityClass}`} data-node-id={certId}>
                             <div className={styles.inlineControls}>
-                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['certifications'], idx)}><Trash2 size={13} /></button>
+                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['certifications'], idx)} title="Delete item"><Trash2 size={13} /></button>
                             </div>
                             <div className={styles.rowBetween}>
-                                <div className={styles.primaryText}>
-                                    <SmartEditable path={['certifications', idx, 'name']} text={cert.name} placeholder="Certification Title" />
+                                <div className={styles.leftCol}>
+                                    <div className={styles.primaryText}>
+                                        <SmartEditable path={['certifications', idx, 'name']} text={cert.name} placeholder="Certification Title" />
+                                    </div>
+                                    <div className={styles.secondaryText}>
+                                        <SmartEditable path={['certifications', idx, 'issuer']} text={cert.issuer} placeholder="Issuing Body" />
+                                    </div>
                                 </div>
-                                <div className={styles.dateLocation}>
-                                    <SmartEditable inline path={['certifications', idx, 'date']} text={cert.date} placeholder="Date" />
+                                <div className={styles.rightCol}>
+                                    <div className={styles.dateLocation}>
+                                        <SmartEditable inline path={['certifications', idx, 'date']} text={cert.date} placeholder="Date" />
+                                    </div>
+                                    {cert.url ? (
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 2 }}>
+                                            <SmartLinkEditable path={['certifications', idx]} label={cert.platform || cert.label || 'Credential'} url={cert.url} className={styles.link} />
+                                            <button className={styles.iconBtnDanger} style={{ padding: 1 }} onClick={() => updateField(['certifications', idx, 'url'], '')} title="Delete credential link">
+                                                <Trash2 size={10} />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button className={styles.addBtn} style={{ fontSize: '7.5pt', marginTop: 2 }} onClick={() => updateField(['certifications', idx, 'url'], 'https://credential.com')}>
+                                            <LinkIcon size={10} /> + Add Link
+                                        </button>
+                                    )}
                                 </div>
-                            </div>
-                            <div className={styles.secondaryText}>
-                                <SmartEditable path={['certifications', idx, 'issuer']} text={cert.issuer} placeholder="Issuing Body" />
                             </div>
                         </div>
                     )
                 });
             });
 
-            sectionBlocks.push({
-                id: 'certs-add-btn',
+            res.push({
+                id: 'add-certification-btn',
                 type: 'control',
                 content: (
-                    <button className={styles.addBtn} style={{ marginBottom: '12pt' }} onClick={() => addArrayItem(['certifications'], { _id: generateId(), name: '', issuer: '' })}>
+                    <button className={styles.addBtn} style={{ marginTop: 4, marginBottom: 8 }} onClick={() => addArrayItem(['certifications'], { _id: generateId(), name: '', issuer: '' })}>
                         <Plus size={12} /> Add Certification
                     </button>
                 )
             });
         }
-        return sectionBlocks;
+
+        return res;
     };
 
-    const renderCustomSections = () => {
-        const sectionBlocks = [];
-        if (additionalSections && additionalSections.length > 0) {
-            additionalSections.forEach((sec, idx) => {
-                const secId = sec._id || `custom-${idx}`;
-                sectionBlocks.push({
-                    id: `custom-title-${secId}`,
-                    type: 'section-title',
-                    content: (
-                        <div style={{ position: 'relative' }}>
-                            <div className={styles.inlineControls}>
-                                <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['additionalSections'], idx)}><Trash2 size={13} /></button>
-                            </div>
-                            <h2 className={styles.sectionTitle}>
+    // --- CUSTOM ADDITIONAL SECTIONS ---
+    const renderCustomSectionsBlocks = () => {
+        const hasItems = additionalSections && additionalSections.length > 0;
+        if (!hasItems) return [];
+        const res = [];
+
+        res.push({
+            id: 'title-additionalSections',
+            type: 'section-title',
+            content: (
+                <SectionWrapper
+                    sectionKey="additionalSections"
+                    title="Additional Sections"
+                    onMoveUp={() => moveSectionUp('additionalSections')}
+                    onMoveDown={() => moveSectionDown('additionalSections')}
+                    onDelete={() => deleteSection('additionalSections')}
+                >
+                    <h2 className={styles.sectionTitle}>Custom Section</h2>
+                </SectionWrapper>
+            )
+        });
+
+        additionalSections.forEach((sec, idx) => {
+            const secId = sec._id || `custom-${idx}`;
+            res.push({
+                id: `custom-${secId}`,
+                type: 'block-item',
+                content: (
+                    <div className={styles.blockItem} style={{ marginBottom: 12 }}>
+                        <div className={styles.rowBetween}>
+                            <h3 className={styles.sectionTitle} style={{ flex: 1, margin: '4pt 0', borderBottom: 'none' }}>
                                 <SmartEditable path={['additionalSections', idx, 'sectionTitle']} text={sec.sectionTitle} placeholder="Custom Section Title" />
-                            </h2>
+                            </h3>
+                            <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['additionalSections'], idx)} title="Delete section">
+                                <Trash2 size={12} />
+                            </button>
                         </div>
-                    )
-                });
 
-                sec.items?.forEach((item, jdx) => {
-                    const itemId = item._id || `custom-item-${jdx}`;
-                    sectionBlocks.push({
-                        id: `custom-item-${secId}-${itemId}`,
-                        type: 'block-header',
-                        content: (
-                            <div className={`${styles.blockItem} ${densityClass}`} data-node-id={itemId}>
-                                <div className={styles.inlineControls}>
-                                    <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['additionalSections', idx, 'items'], jdx)}><Trash2 size={13} /></button>
-                                </div>
-                                <div className={styles.rowBetween}>
-                                    <div className={styles.primaryText}>
-                                        <SmartEditable path={['additionalSections', idx, 'items', jdx, 'heading']} text={item.heading} placeholder="Heading" />
+                        {sec.items?.map((item, jdx) => {
+                            const itemId = item._id || `custom-item-${jdx}`;
+                            return (
+                                <div key={`custom-item-${itemId}`} className={`${styles.blockItem} ${densityClass}`} data-node-id={itemId} style={{ paddingLeft: 8 }}>
+                                    <div className={styles.inlineControls}>
+                                        <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['additionalSections', idx, 'items'], jdx)} title="Delete item"><Trash2 size={13} /></button>
                                     </div>
-                                    <div className={styles.dateLocation}>
-                                        <SmartEditable inline path={['additionalSections', idx, 'items', jdx, 'date']} text={item.date} placeholder="Date" />
+                                    <div className={styles.rowBetween}>
+                                        <div className={styles.leftCol}>
+                                            <div className={styles.primaryText}>
+                                                <SmartEditable path={['additionalSections', idx, 'items', jdx, 'heading']} text={item.heading} placeholder="Heading / Item Title" />
+                                            </div>
+                                            <div className={styles.secondaryText}>
+                                                <SmartEditable path={['additionalSections', idx, 'items', jdx, 'subheading']} text={item.subheading} placeholder="Subheading / Role" />
+                                            </div>
+                                        </div>
+                                        <div className={styles.rightCol}>
+                                            <div className={styles.dateLocation}>
+                                                <SmartEditable inline path={['additionalSections', idx, 'items', jdx, 'date']} text={item.date} placeholder="Date" />
+                                            </div>
+                                        </div>
                                     </div>
+                                    {item.description !== undefined && (
+                                        <div className={styles.paragraph}>
+                                            <SmartEditable type="multiline" path={['additionalSections', idx, 'items', jdx, 'description']} text={item.description} placeholder="Description overview..." />
+                                        </div>
+                                    )}
                                 </div>
-                                <div className={styles.secondaryText}>
-                                    <SmartEditable path={['additionalSections', idx, 'items', jdx, 'subheading']} text={item.subheading} placeholder="Subheading" />
-                                </div>
-                                <div className={styles.paragraph}>
-                                    <SmartEditable type="multiline" path={['additionalSections', idx, 'items', jdx, 'description']} text={item.description} placeholder="Description..." />
-                                </div>
-                            </div>
-                        )
-                    });
-                });
+                            );
+                        })}
 
-                sectionBlocks.push({
-                    id: `custom-item-add-${secId}`,
-                    type: 'control',
-                    content: (
-                        <button className={styles.addBtn} style={{ marginBottom: '12pt' }} onClick={() => addArrayItem(['additionalSections', idx, 'items'], { _id: generateId(), heading: '', description: '' })}>
-                            <Plus size={12} /> Add Item
-                        </button>
-                    )
-                });
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+                            <button className={styles.addBtn} onClick={() => addArrayItem(['additionalSections', idx, 'items'], { _id: generateId(), heading: '', description: '' })}>
+                                <Plus size={12} /> Add Item
+                            </button>
+                        </div>
+                    </div>
+                )
             });
-        }
-        return sectionBlocks;
+        });
+
+        return res;
     };
 
-    // ADAPTIVE SECTION ORDERING BASED ON CANDIDATE PERSONA
-    if (persona === 'fresher') {
-        blocks.push(...renderEducationSection());
-        blocks.push(...renderProjectsSection());
-        blocks.push(...renderSkillsSection());
-        blocks.push(...renderExperienceSection());
-    } else if (persona === 'career-changer') {
-        blocks.push(...renderSkillsSection());
-        blocks.push(...renderExperienceSection());
-        blocks.push(...renderProjectsSection());
-        blocks.push(...renderEducationSection());
-    } else {
-        blocks.push(...renderExperienceSection());
-        blocks.push(...renderSkillsSection());
-        blocks.push(...renderProjectsSection());
-        blocks.push(...renderEducationSection());
-    }
+    // DYNAMIC MAP
+    const sectionMap = {
+        summary: renderSummaryBlocks,
+        experience: renderExperienceBlocks,
+        projects: renderProjectsBlocks,
+        education: renderEducationBlocks,
+        skills: renderSkillsBlocks,
+        certifications: renderCertificationsBlocks,
+        additionalSections: renderCustomSectionsBlocks
+    };
 
-    blocks.push(...renderCertificationsSection());
-    blocks.push(...renderCustomSections());
+    // MAP OVER SECTION ORDER
+    sectionOrder.forEach(key => {
+        if (sectionMap[key]) {
+            blocks.push(...sectionMap[key]());
+        }
+    });
 
     return blocks;
 };

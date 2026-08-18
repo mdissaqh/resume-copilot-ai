@@ -1,0 +1,10 @@
+.dateRange {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  font-weight: 600;
+  font-size: 9.5pt;
+  color: #4b5563;
+  white-space: nowrap;
+}

@@ -2,6 +2,7 @@ import React, { useRef, useState, useLayoutEffect } from 'react';
 import styles from './A4Canvas.module.css';
 import { generateEvergreenBlocks } from './templates/EvergreenResumeRenderer';
 import { PaginationEngine } from './PaginationEngine';
+import { AddSectionMenu } from './AddSectionMenu';
 
 export const A4Canvas = ({ resumeData }) => {
     const wrapperRef = useRef(null);
@@ -13,13 +14,13 @@ export const A4Canvas = ({ resumeData }) => {
 
     const blocks = generateEvergreenBlocks(resumeData);
 
-    // RESPONSIVE MOBILE SCALING ENGINE
+    // RESPONSIVE MOBILE SCALING ENGINE WITH TOP-CENTER TRANSFORM ORIGIN
     useLayoutEffect(() => {
         if (!wrapperRef.current) return;
 
         const observer = new ResizeObserver((entries) => {
             const { width } = entries[0].contentRect;
-            const TARGET_WIDTH = 834; // A4 width (794px) + comfortable workspace padding (40px)
+            const TARGET_WIDTH = 834; // A4 width (794px) + workspace padding (40px)
 
             if (width < TARGET_WIDTH) {
                 setScale(width / TARGET_WIDTH);
@@ -35,7 +36,7 @@ export const A4Canvas = ({ resumeData }) => {
     useLayoutEffect(() => {
         const PAGE_HEIGHT = 1123;
         const PAGE_GAP = 30;
-        const unscaledHeight = (PAGE_HEIGHT * pageCount) + (PAGE_GAP * (pageCount - 1)) + 40;
+        const unscaledHeight = (PAGE_HEIGHT * pageCount) + (PAGE_GAP * (pageCount - 1)) + 60;
         const scaledHeight = unscaledHeight * scale;
 
         setWrapperHeight(`${scaledHeight}px`);

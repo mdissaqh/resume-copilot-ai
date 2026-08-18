@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { generateResumeApi, refreshCopilotApi, getResumeByIdApi, downloadResumePDFApi } from "../api/builder.api";
+import { useReactToPrint } from "react-to-print";
+import { generateResumeApi, refreshCopilotApi, getResumeByIdApi } from "../api/builder.api";
 import { getAnalysisByIdApi } from "../../dashboard/api/dashboard.api";
 import { A4Canvas } from "../components/A4Canvas/A4Canvas";
 import { InlineAISuggestion } from "../components/AICopilot/InlineAISuggestion";
@@ -16,6 +17,7 @@ const BuilderPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
+    const printableRef = useRef(null);
 
     const {
         resumeData,
@@ -26,19 +28,25 @@ const BuilderPage = () => {
         redo,
         past,
         future,
-        dbResumeId
+        dbResumeId,
+        interactionHistory,
+        recordInteraction
     } = useResumeStore();
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [exporting, setExporting] = useState(false);
     const [authModalOpen, setAuthModalOpen] = useState(false);
 
     // AI Copilot State
     const [activeQuestion, setActiveQuestion] = useState(null);
     const [activeSuggestions, setActiveSuggestions] = useState([]);
-    const [interactionHistory, setInteractionHistory] = useState([]);
     const [scanning, setScanning] = useState(false);
+
+    // react-to-print native browser ATS-parsable PDF generator
+    const handlePrint = useReactToPrint({
+        contentRef: printableRef,
+        documentTitle: `${(resumeData?.personalInfo?.fullName || 'Resume').trim().replace(/\s+/g, '_')}_Resume`,
+    });
 
     // 1. Initial Document Loading Logic (Upload vs Scratch vs Guest)
     useEffect(() => {
@@ -111,7 +119,7 @@ const BuilderPage = () => {
         }
     }, [dbResumeId, isAuthenticated, interactionHistory]);
 
-    // Handle Question Answers (One-by-One progression)
+    // Handle Question Answers (One-by-One progression with anti-loop record)
     const handleAnswerQuestion = (question, answerValue) => {
         if (question.targetPath) {
             if (question.type === 'yes_no') {
@@ -124,22 +132,22 @@ const BuilderPage = () => {
         }
 
         const qId = question.id || question.questionId;
-        setInteractionHistory(prev => [...prev, qId]);
+        if (qId) recordInteraction(qId);
         setActiveQuestion(null);
 
         setTimeout(() => {
             handleScanCopilot();
-        }, 500);
+        }, 400);
     };
 
     const handleSkipQuestion = (questionId) => {
-        setInteractionHistory(prev => [...prev, questionId]);
+        if (questionId) recordInteraction(questionId);
         setActiveQuestion(null);
         setTimeout(() => handleScanCopilot(), 300);
     };
 
     const handleResolveSuggestion = (suggestionId) => {
-        setInteractionHistory(prev => [...prev, suggestionId]);
+        if (suggestionId) recordInteraction(suggestionId);
         setActiveSuggestions(prev => prev.filter(s => (s.id || s.suggestionId) !== suggestionId));
     };
 
@@ -147,35 +155,13 @@ const BuilderPage = () => {
         updateField(['metadata', 'persona'], e.target.value);
     };
 
-    // Download PDF Action with Guest Wall Enforcement and Server-Side Puppeteer API
-    const handleDownloadPDF = async () => {
+    // Download PDF Action with Guest Wall Enforcement and Native Print Engine
+    const handleDownloadPDF = () => {
         if (!isAuthenticated) {
             setAuthModalOpen(true);
             return;
         }
-
-        setExporting(true);
-        try {
-            if (dbResumeId) {
-                const blobData = await downloadResumePDFApi(dbResumeId);
-                const url = window.URL.createObjectURL(new Blob([blobData], { type: 'application/pdf' }));
-                const link = document.createElement('a');
-                link.href = url;
-                const safeName = (resumeData?.personalInfo?.fullName || 'Resume').trim().replace(/\s+/g, '_');
-                link.setAttribute('download', `${safeName}_Resume.pdf`);
-                document.body.appendChild(link);
-                link.click();
-                link.parentNode.removeChild(link);
-                setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-            } else {
-                alert("Please save your resume before downloading.");
-            }
-        } catch (e) {
-            console.error("PDF Download Error:", e);
-            alert("Failed to generate PDF document. Please try again.");
-        } finally {
-            setExporting(false);
-        }
+        handlePrint();
     };
 
     const renderSaveStatus = () => {
@@ -265,8 +251,8 @@ const BuilderPage = () => {
 
                     {renderSaveStatus()}
 
-                    <button className={styles.primaryBtn} onClick={handleDownloadPDF} disabled={exporting}>
-                        <Download size={16} /> {exporting ? "Generating PDF..." : "Download PDF"}
+                    <button className={styles.primaryBtn} onClick={handleDownloadPDF}>
+                        <Download size={16} /> Download PDF
                     </button>
                 </div>
             </div>
@@ -274,19 +260,19 @@ const BuilderPage = () => {
             {/* Main Workspace */}
             <div className={styles.workspace}>
                 <div className={styles.canvasArea}>
-                    <div style={{ width: '100%', maxWidth: '840px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                        {/* Single Question Interview Card */}
-                        {activeQuestion && (
-                            <AIQuestionCard
-                                question={activeQuestion}
-                                onAnswer={handleAnswerQuestion}
-                                onSkip={handleSkipQuestion}
-                                loading={scanning}
-                            />
-                        )}
-
+                    <div ref={printableRef} style={{ width: '100%', maxWidth: '840px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <A4Canvas resumeData={resumeData} />
                     </div>
+
+                    {/* Single Question Bottom-Docked Card */}
+                    {activeQuestion && (
+                        <AIQuestionCard
+                            question={activeQuestion}
+                            onAnswer={handleAnswerQuestion}
+                            onSkip={handleSkipQuestion}
+                            loading={scanning}
+                        />
+                    )}
 
                     {/* Spatially Anchored Inline AI Suggestions */}
                     <InlineAISuggestion

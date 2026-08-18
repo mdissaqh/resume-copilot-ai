@@ -32,53 +32,55 @@ export const AIQuestionCard = ({ question, onAnswer, onSkip, loading }) => {
     };
 
     return (
-        <div className={styles.questionCard}>
-            <div className={styles.cardHeader}>
-                <div className={styles.headerTitle}>
-                    <Sparkles size={16} className={styles.sparkle} />
-                    <span>AI Copilot Question</span>
+        <div className={styles.dockedContainer}>
+            <div className={styles.questionCard}>
+                <div className={styles.cardHeader}>
+                    <div className={styles.headerTitle}>
+                        <Sparkles size={16} className={styles.sparkle} />
+                        <span>AI Copilot Question</span>
+                    </div>
+                    {onSkip && (
+                        <button className={styles.skipBtn} onClick={() => onSkip(question.id || question.questionId)}>
+                            Skip / Dismiss
+                        </button>
+                    )}
                 </div>
-                {onSkip && (
-                    <button className={styles.skipBtn} onClick={() => onSkip(question.id)}>
-                        Skip
-                    </button>
+
+                <p className={styles.questionText}>{question.message || question.question}</p>
+
+                {question.targetNodeId && (
+                    <div className={styles.targetBadge}>
+                        <Target size={12} /> Target highlighted on document
+                    </div>
+                )}
+
+                {/* Answer Controls */}
+                {question.type === 'yes_no' ? (
+                    <div className={styles.buttonRow}>
+                        <button className={styles.btnYes} onClick={() => onAnswer(question, 'Yes')} disabled={loading}>
+                            <Check size={14} /> Yes
+                        </button>
+                        <button className={styles.btnNo} onClick={() => onAnswer(question, 'No')} disabled={loading}>
+                            <X size={14} /> No
+                        </button>
+                    </div>
+                ) : (
+                    <div className={styles.inputWrapper}>
+                        <input
+                            type="text"
+                            className={styles.input}
+                            placeholder={question.placeholder || "Type your answer..."}
+                            value={answerText}
+                            onChange={(e) => setAnswerText(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSubmitText()}
+                            disabled={loading}
+                        />
+                        <button className={styles.sendBtn} onClick={handleSubmitText} disabled={!answerText.trim() || loading}>
+                            <Send size={14} />
+                        </button>
+                    </div>
                 )}
             </div>
-
-            <p className={styles.questionText}>{question.message || question.question}</p>
-
-            {question.targetNodeId && (
-                <div className={styles.targetBadge}>
-                    <Target size={12} /> Target highlighted on document
-                </div>
-            )}
-
-            {/* Answer Controls */}
-            {question.type === 'yes_no' ? (
-                <div className={styles.buttonRow}>
-                    <button className={styles.btnYes} onClick={() => onAnswer(question, 'Yes')} disabled={loading}>
-                        <Check size={14} /> Yes
-                    </button>
-                    <button className={styles.btnNo} onClick={() => onAnswer(question, 'No')} disabled={loading}>
-                        <X size={14} /> No
-                    </button>
-                </div>
-            ) : (
-                <div className={styles.inputWrapper}>
-                    <input
-                        type="text"
-                        className={styles.input}
-                        placeholder={question.placeholder || "Type your answer..."}
-                        value={answerText}
-                        onChange={(e) => setAnswerText(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSubmitText()}
-                        disabled={loading}
-                    />
-                    <button className={styles.sendBtn} onClick={handleSubmitText} disabled={!answerText.trim() || loading}>
-                        <Send size={14} />
-                    </button>
-                </div>
-            )}
         </div>
     );
 };

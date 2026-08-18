@@ -1,16 +1,27 @@
-.questionCard {
-  background: #ffffff;
-  border: 1.5px solid #bfdbfe;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  margin-bottom: 16px;
-  animation: slideDown 0.2s ease-out;
+.dockedContainer {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: calc(100% - 32px);
+  max-width: 580px;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes slideUp {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.questionCard {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(59, 130, 246, 0.35);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 20px 25px -5px rgba(37, 99, 235, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.06);
 }
 
 .cardHeader {
@@ -24,10 +35,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  color: #1e40af;
+  color: #1d4ed8;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .sparkle {
@@ -35,20 +47,24 @@
 }
 
 .skipBtn {
-  background: none;
-  border: none;
-  color: #94a3b8;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
   font-size: 0.78rem;
   font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .skipBtn:hover {
-  color: #475569;
+  background: #e2e8f0;
+  color: #1e293b;
 }
 
 .questionText {
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #0f172a;
   margin: 0 0 8px 0;
@@ -65,7 +81,7 @@
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .buttonRow {
@@ -79,15 +95,16 @@
   background: #2563eb;
   color: white;
   border: none;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
+  transition: background 0.15s ease;
 }
 
 .btnYes:hover:not(:disabled) {
@@ -99,15 +116,16 @@
   background: #f8fafc;
   color: #475569;
   border: 1px solid #cbd5e1;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
+  transition: all 0.15s ease;
 }
 
 .btnNo:hover:not(:disabled) {
@@ -122,9 +140,9 @@
 
 .input {
   flex: 1;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 8px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 14px;
   font-size: 0.9rem;
   outline: none;
   box-sizing: border-box;
@@ -132,21 +150,29 @@
 
 .input:focus {
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .sendBtn {
   background: #2563eb;
   color: white;
   border: none;
-  padding: 0 14px;
-  border-radius: 6px;
+  padding: 0 16px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.15s ease;
 }
 
 .sendBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media print {
+  .dockedContainer {
+    display: none !important;
+  }
 }

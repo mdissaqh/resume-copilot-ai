@@ -3,84 +3,77 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    /* Prevent body horizontal scroll when scaling */
-    overflow-x: hidden; 
-    /* Add top padding for workspace comfort */
-    padding-top: 40px; 
+    overflow-x: hidden;
+    padding-top: 30px;
+    padding-bottom: 40px;
     box-sizing: border-box;
 }
 
 .scalingContainer {
-    /* The origin must be top center so it scales inward correctly on mobile */
     transform-origin: top center;
     display: flex;
     flex-direction: column;
-    gap: 30px; /* Physical gap between A4 pages in the workspace */
-    /* Smooth zoom out */
-    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1); 
+    gap: 30px; /* Physical gap between A4 pages in workspace */
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .a4Page {
     /* EXACT A4 PHYSICAL DIMENSIONS AT 96 DPI */
-    width: 794px; 
-    height: 1123px; 
-    
-    background-color: white;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    
-    /* Approx 20mm margins */
-    padding: 75px; 
+    width: 794px;
+    height: 1123px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+    padding: 60px 65px;
     box-sizing: border-box;
-    
     position: relative;
-    
-    /* CRITICAL FIX 1: NO overflow: hidden! 
-       We need ResizeObserver to measure blocks accurately even if they 
-       temporarily break bounds before the PaginationEngine reflows them. */
-    overflow: visible; 
-    
-    /* CRITICAL FIX 2: Stop mobile browsers from inflating text sizes */
+    overflow: visible;
     -webkit-text-size-adjust: none;
     text-size-adjust: none;
 }
 
-/* Ensure margins within blocks don't collapse with the page boundaries */
 .measureBlock {
     width: 100%;
-    display: flow-root; 
+    display: flow-root;
 }
 
-/* Bullet list wrapper styled to perfectly match the template */
 .bulletList {
     margin: 4pt 0 0 0;
     padding-left: 16pt;
     list-style-type: none;
 }
 
-/* PRINT MEDIA RULES for future Puppeteer export */
+/* NATIVE BROWSER ATS PRINT MEDIA ENGINE - 100% PIXEL-PERFECT PREVIEW MATCH */
 @media print {
     .canvasWrapper {
-        padding: 0;
-        background: none;
+        padding: 0 !important;
+        background: none !important;
     }
     
     .scalingContainer {
         transform: scale(1) !important;
-        gap: 0;
+        gap: 0 !important;
     }
 
     .a4Page {
-        box-shadow: none;
-        margin: 0;
-        /* Let the print engine handle the physical bounds */
-        height: auto; 
-        min-height: 1123px;
-        page-break-after: always;
-        overflow: hidden;
+        width: 210mm !important;
+        height: 297mm !important;
+        padding: 60px 65px !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+        box-sizing: border-box !important;
+    }
+
+    .a4Page:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
     }
 
     @page {
-        size: A4;
-        margin: 0; 
+        size: A4 portrait;
+        margin: 0 !important;
     }
 }

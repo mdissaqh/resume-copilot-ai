@@ -139,16 +139,20 @@ export const transformAndOptimizeResume = async (resumeText, jobDescription) => 
 export const refreshAICopilot = async ({ currentResume, targetRole, jobDescription, candidateLevel, jobType, interactionHistory = [] }) => {
     try {
         let prompt = `You are ResumeCopilot AI performing an intelligent, state-aware inspection of the current resume.
+        CRITICAL ANTI-LOOP & QUALITY FILTER DIRECTIVE:
+        1. Review the interactionHistory array provided: ${JSON.stringify(interactionHistory)}. You MUST NOT ask about, suggest changes for, or target any nodes associated with these recorded IDs. If a user previously answered, skipped, or rejected a prompt regarding any node or question/suggestion ID in interactionHistory, you are strictly forbidden from bringing it up again.
+        2. QUALITY FILTER: I am providing you the exact current state of the document. If a node (like a project description, experience bullet, or summary) already contains strong action verbs and measurable metrics, DO NOT suggest refining it again. You MUST move on to other missing fields (like missing dates, missing links, or empty summaries). ONLY return a suggestion if the text is objectively poor or missing critical facts.
+
         CRITICAL RULES:
         1. SPATIAL TARGETING: Every suggestion and question MUST target a specific node ID in the resume.
            - Node ID for summary is 'professionalSummary'
            - Node ID for experience items is item._id (e.g. 'exp_1') or item._id + '-bullet-' + index (e.g. 'exp_1-bullet-0')
            - Node ID for projects is project._id or project._id + '-hl-' + index
            - Node ID for personal info is 'personalInfo'
-        2. DEDUPLICATION: DO NOT generate questions or suggestions matching IDs present in interactionHistory: ${JSON.stringify(interactionHistory)}
+        2. SEQUENTIAL INTERROGATION: Return AT MOST ONE high-priority question in "questions" and AT MOST ONE suggestion in "suggestions". Prioritize missing critical fields (e.g. asking for full name, email, or missing summary via a 'text' input) BEFORE suggesting optimizations (e.g. asking "Did this achieve a measurable result?" via a 'yes_no' input).
         3. FACT SAFETY: DO NOT invent company names, dates, or metrics. Ask Yes/No or text questions if information is unverified.
         4. QUESTION TYPES:
-           - Use 'yes_no' type for confirmation questions (e.g. "Was this project deployed publicly?", "Do you have a LinkedIn profile?")
+           - Use 'yes_no' type for confirmation questions.
            - Use 'text' type when actual data input is required.
 
         Current Resume State: ${JSON.stringify(currentResume)}

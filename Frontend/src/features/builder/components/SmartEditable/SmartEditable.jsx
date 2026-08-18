@@ -50,6 +50,7 @@ export const SmartEditable = ({
 
     const wrapperClass = inline ? styles.inlineWrapper : styles.editableWrapper;
     const combinedClassName = `${type === 'multiline' ? styles.textarea : styles.input} ${className}`;
+    const calculatedSize = inline ? Math.max(String(displayValue || '').length, String(placeholder || '').length, 2) : undefined;
 
     return (
         <div className={wrapperClass}>
@@ -57,7 +58,7 @@ export const SmartEditable = ({
                 <textarea
                     ref={elementRef}
                     className={combinedClassName}
-                    value={text}
+                    value={displayValue}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
@@ -67,8 +68,9 @@ export const SmartEditable = ({
                 <input
                     ref={elementRef}
                     type="text"
+                    size={calculatedSize}
                     className={combinedClassName}
-                    value={text}
+                    value={displayValue}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}

@@ -9,6 +9,7 @@ export const useResumeStore = create((set, get) => ({
     resumeData: null,
     dbResumeId: null,
     templateId: 'evergreen',
+    interactionHistory: [],
     
     // Undo / Redo State
     past: [],
@@ -19,14 +20,36 @@ export const useResumeStore = create((set, get) => ({
     saveTimer: null,
 
     // Hydrate store with loaded document
-    setResumeData: (data, dbId = null, template = 'evergreen') => set({
-        resumeData: normalizeResumeData(data),
-        dbResumeId: dbId,
-        templateId: template || 'evergreen',
-        past: [],
-        future: [],
-        saveStatus: 'saved'
-    }),
+    setResumeData: (data, dbId = null, template = 'evergreen') => {
+        const normalized = normalizeResumeData(data);
+        const history = normalized?.interactionHistory || data?.interactionHistory || [];
+        set({
+            resumeData: normalized,
+            dbResumeId: dbId,
+            templateId: template || 'evergreen',
+            interactionHistory: history,
+            past: [],
+            future: [],
+            saveStatus: 'saved'
+        });
+    },
+
+    recordInteraction: (id) => {
+        if (!id) return;
+        set((state) => {
+            if (state.interactionHistory.includes(id)) return state;
+            const updatedHistory = [...state.interactionHistory, id];
+            const updatedResume = state.resumeData
+                ? { ...state.resumeData, interactionHistory: updatedHistory }
+                : state.resumeData;
+            return {
+                interactionHistory: updatedHistory,
+                resumeData: updatedResume,
+                saveStatus: 'dirty'
+            };
+        });
+        get().triggerAutosave();
+    },
 
     setTemplateId: (templateId) => {
         set({ templateId });
@@ -114,6 +137,72 @@ export const useResumeStore = create((set, get) => ({
         get().triggerAutosave();
     },
 
+    // Section Ordering Helpers
+    getSectionOrder: () => {
+        const state = get();
+        const customOrder = state.resumeData?.metadata?.sectionOrder;
+        if (Array.isArray(customOrder) && customOrder.length > 0) {
+            return customOrder;
+        }
+        const persona = state.resumeData?.metadata?.persona || 'experienced';
+        if (persona === 'fresher') {
+            return ['summary', 'education', 'projects', 'skills', 'experience', 'certifications', 'additionalSections'];
+        } else if (persona === 'career-changer') {
+            return ['summary', 'skills', 'experience', 'projects', 'education', 'certifications', 'additionalSections'];
+        }
+        return ['summary', 'experience', 'skills', 'projects', 'education', 'certifications', 'additionalSections'];
+    },
+
+    moveSectionUp: (sectionKey) => {
+        const currentOrder = get().getSectionOrder();
+        const idx = currentOrder.indexOf(sectionKey);
+        if (idx <= 0) return;
+        const newOrder = [...currentOrder];
+        const temp = newOrder[idx - 1];
+        newOrder[idx - 1] = newOrder[idx];
+        newOrder[idx] = temp;
+        get().updateField(['metadata', 'sectionOrder'], newOrder);
+    },
+
+    moveSectionDown: (sectionKey) => {
+        const currentOrder = get().getSectionOrder();
+        const idx = currentOrder.indexOf(sectionKey);
+        if (idx < 0 || idx >= currentOrder.length - 1) return;
+        const newOrder = [...currentOrder];
+        const temp = newOrder[idx + 1];
+        newOrder[idx + 1] = newOrder[idx];
+        newOrder[idx] = temp;
+        get().updateField(['metadata', 'sectionOrder'], newOrder);
+    },
+
+    moveSectionToTop: (sectionKey) => {
+        const currentOrder = get().getSectionOrder();
+        const filtered = currentOrder.filter(k => k !== sectionKey);
+        const targetIndex = filtered.includes('summary') ? 1 : 0;
+        filtered.splice(targetIndex, 0, sectionKey);
+        get().updateField(['metadata', 'sectionOrder'], filtered);
+    },
+
+    moveSectionToBottom: (sectionKey) => {
+        const currentOrder = get().getSectionOrder();
+        const filtered = currentOrder.filter(k => k !== sectionKey);
+        filtered.push(sectionKey);
+        get().updateField(['metadata', 'sectionOrder'], filtered);
+    },
+
+    deleteSection: (sectionKey) => {
+        const state = get();
+        if (!state.resumeData) return;
+        if (sectionKey === 'summary') {
+            get().updateField(['professionalSummary'], '');
+        } else if (Array.isArray(state.resumeData[sectionKey])) {
+            get().updateField([sectionKey], []);
+        }
+        const currentOrder = get().getSectionOrder();
+        const newOrder = currentOrder.filter(k => k !== sectionKey);
+        get().updateField(['metadata', 'sectionOrder'], newOrder);
+    },
+
     // Debounced background autosave (1500ms debounce)
     triggerAutosave: () => {
         const { saveTimer } = get();
@@ -127,12 +216,13 @@ export const useResumeStore = create((set, get) => ({
     },
 
     performSave: async () => {
-        const { dbResumeId, resumeData, templateId, saveStatus } = get();
+        const { dbResumeId, resumeData, templateId, saveStatus, interactionHistory } = get();
         if (!dbResumeId || !resumeData || saveStatus === 'saving') return;
 
         set({ saveStatus: 'saving' });
         try {
-            await saveResumeApi(dbResumeId, resumeData, templateId);
+            const payloadContent = { ...resumeData, interactionHistory };
+            await saveResumeApi(dbResumeId, payloadContent, templateId, null, { interactionHistory });
             set({ saveStatus: 'saved' });
         } catch (err) {
             console.error("Autosave failed:", err);
