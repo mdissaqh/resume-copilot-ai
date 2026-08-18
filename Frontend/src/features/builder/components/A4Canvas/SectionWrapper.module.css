@@ -35,7 +35,8 @@
 }
 
 .sectionContainer.focused .sectionControls,
-.sectionContainer:focus-within .sectionControls {
+.sectionContainer:focus-within .sectionControls,
+.sectionContainer:hover .sectionControls {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);

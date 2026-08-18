@@ -92,6 +92,18 @@ export const generateEvergreenBlocks = (data) => {
         });
     }
 
+    contactItems.push(
+        <div key="add-link-btn" className={styles.contactItem}>
+            <button
+                className={styles.addBtn}
+                style={{ fontSize: '7.5pt' }}
+                onClick={() => addArrayItem(['personalInfo', 'links'], { platform: 'Link', url: '' })}
+            >
+                <Plus size={10} /> Link
+            </button>
+        </div>
+    );
+
     blocks.push({
         id: 'header',
         type: 'header',

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Briefcase, GraduationCap, FolderGit2, Wrench, Award, FileText, Link as LinkIcon, Layers } from 'lucide-react';
+import { Plus, Briefcase, GraduationCap, FolderGit2, Wrench, Award, FileText, Layers } from 'lucide-react';
 import { useResumeStore } from '../../../../store/useResumeStore';
 import { generateId } from '../../../../utils/idGenerator';
 import styles from './AddSectionMenu.module.css';
@@ -109,19 +109,11 @@ export const AddSectionMenu = () => {
         setOpen(false);
     };
 
-    const handleAddLink = () => {
-        addArrayItem(['personalInfo', 'links'], {
-            platform: 'Link',
-            url: ''
-        });
-        setOpen(false);
-    };
-
     const handleAddCustom = () => {
         addArrayItem(['additionalSections'], {
             _id: generateId(),
             sectionTitle: 'Additional Section',
-            items: [{ _id: generateId(), heading: '', description: '' }]
+            items: ['']
         });
         ensureSectionInOrder('additionalSections');
         setOpen(false);
@@ -172,9 +164,6 @@ export const AddSectionMenu = () => {
                             <Award size={14} /> Certification
                         </button>
                     )}
-                    <button className={styles.menuItem} onClick={handleAddLink}>
-                        <LinkIcon size={14} /> Contact Link
-                    </button>
                     <button className={styles.menuItem} onClick={handleAddCustom}>
                         <Layers size={14} /> Custom Section
                     </button>
