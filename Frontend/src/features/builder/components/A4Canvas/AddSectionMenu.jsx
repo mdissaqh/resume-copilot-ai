@@ -111,7 +111,7 @@ export const AddSectionMenu = () => {
 
     const handleAddLink = () => {
         addArrayItem(['personalInfo', 'links'], {
-            platform: 'LinkedIn',
+            platform: 'Link',
             url: ''
         });
         setOpen(false);

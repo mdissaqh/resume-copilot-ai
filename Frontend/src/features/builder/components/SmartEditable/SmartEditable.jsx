@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect, useState } from 'react';
+import React, { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { useResumeStore } from '../../../../store/useResumeStore';
 import styles from './SmartEditable.module.css';
 
@@ -13,12 +13,11 @@ export const SmartEditable = ({
     placeholder = 'Add text...',
     className = '',
     inline = false,
-    onBackspaceEmpty = null // Allows parents to know when to delete a bullet
+    onBackspaceEmpty = null
 }) => {
     const updateField = useResumeStore(state => state.updateField);
     const elementRef = useRef(null);
 
-    // Auto-resize for multiline
     const adjustHeight = () => {
         if (type === 'multiline' && elementRef.current) {
             elementRef.current.style.height = 'auto';
@@ -30,7 +29,7 @@ export const SmartEditable = ({
         adjustHeight();
     }, [text, type]);
 
-    const displayValue = Array.isArray(text) ? text.join(', ') : text;
+    const displayValue = Array.isArray(text) ? text.join(', ') : (text ?? '');
     const handleChange = (e) => {
         const val = Array.isArray(text) ? e.target.value.split(',').map(s => s.trim()) : e.target.value;
         updateField(path, val);
@@ -38,7 +37,7 @@ export const SmartEditable = ({
     };
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Backspace' && text === '' && onBackspaceEmpty) {
+        if (e.key === 'Backspace' && (text === '' || text === null || text === undefined) && onBackspaceEmpty) {
             e.preventDefault();
             onBackspaceEmpty();
         }
@@ -50,10 +49,16 @@ export const SmartEditable = ({
 
     const wrapperClass = inline ? styles.inlineWrapper : styles.editableWrapper;
     const combinedClassName = `${type === 'multiline' ? styles.textarea : styles.input} ${className}`;
-    const calculatedSize = inline ? Math.max(String(displayValue || '').length, String(placeholder || '').length, 2) : undefined;
+    
+    // Dynamic width calculation for inline single inputs (e.g. Project Title, Dates)
+    const contentLen = (displayValue !== undefined && displayValue !== null && String(displayValue).length > 0)
+        ? String(displayValue).length
+        : Math.max(String(placeholder || '').length, 2);
+    const calculatedSize = inline ? Math.max(contentLen, 2) : undefined;
+    const dynamicStyle = inline ? { width: `${Math.max(contentLen, 1)}ch`, maxWidth: '100%' } : undefined;
 
     return (
-        <div className={wrapperClass}>
+        <div className={wrapperClass} style={inline ? { width: 'auto', display: 'inline-flex' } : undefined}>
             {type === 'multiline' ? (
                 <textarea
                     ref={elementRef}
@@ -69,6 +74,7 @@ export const SmartEditable = ({
                     ref={elementRef}
                     type="text"
                     size={calculatedSize}
+                    style={dynamicStyle}
                     className={combinedClassName}
                     value={displayValue}
                     onChange={handleChange}
@@ -82,34 +88,70 @@ export const SmartEditable = ({
 
 /**
  * Specialized component for editing URLs without breaking the canvas hyperlink flow.
+ * Pre-fills input label text box and renders real <a> tags for 100% clickable PDF export hyperlinks.
  */
-export const SmartLinkEditable = ({ path, label, url, className }) => {
+export const SmartLinkEditable = ({
+    title = 'Edit Link',
+    labelPath,
+    urlPath,
+    label,
+    url = '',
+    defaultLabel = 'Link',
+    className = ''
+}) => {
     const updateField = useResumeStore(state => state.updateField);
     const [isEditing, setIsEditing] = useState(false);
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        if (!isEditing) return;
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                setIsEditing(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isEditing]);
+
+    const effectiveLabel = (label !== undefined && label !== null && String(label).trim() !== '') 
+        ? label 
+        : defaultLabel;
+
+    const validHref = (url && String(url).trim())
+        ? (String(url).startsWith('http://') || String(url).startsWith('https://') ? url : `https://${url}`)
+        : '#';
 
     return (
-        <div className={styles.inlineWrapper} style={{ position: 'relative' }}>
-            <span
+        <div className={styles.inlineWrapper} ref={containerRef} style={{ position: 'relative', display: 'inline-flex' }}>
+            <a
+                href={validHref}
+                target="_blank"
+                rel="noopener noreferrer"
                 className={className}
                 style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                onClick={() => setIsEditing(true)}
+                onClick={(e) => {
+                    e.preventDefault();
+                    setIsEditing(!isEditing);
+                }}
             >
-                {label || url || 'Add Link'}
-            </span>
+                {effectiveLabel}
+            </a>
 
             {isEditing && (
                 <div className={styles.linkPopover}>
+                    <div className={styles.linkPopoverHeader}>{title}</div>
                     <input
                         className={styles.linkInput}
-                        placeholder="Label (e.g. LinkedIn)"
-                        value={label}
-                        onChange={(e) => updateField([...path, 'platform'], e.target.value)}
+                        placeholder={`Label (e.g. ${defaultLabel})`}
+                        value={label !== undefined && label !== null && label !== '' ? label : defaultLabel}
+                        onChange={(e) => updateField(labelPath, e.target.value)}
                     />
                     <input
                         className={styles.linkInput}
                         placeholder="URL (e.g. https://...)"
-                        value={url}
-                        onChange={(e) => updateField([...path, 'url'], e.target.value)}
+                        value={url ?? ''}
+                        onChange={(e) => updateField(urlPath, e.target.value)}
                     />
                     <button className={styles.linkCloseBtn} onClick={() => setIsEditing(false)}>Done</button>
                 </div>

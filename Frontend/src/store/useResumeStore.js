@@ -178,8 +178,7 @@ export const useResumeStore = create((set, get) => ({
     moveSectionToTop: (sectionKey) => {
         const currentOrder = get().getSectionOrder();
         const filtered = currentOrder.filter(k => k !== sectionKey);
-        const targetIndex = filtered.includes('summary') ? 1 : 0;
-        filtered.splice(targetIndex, 0, sectionKey);
+        filtered.unshift(sectionKey);
         get().updateField(['metadata', 'sectionOrder'], filtered);
     },
 
