@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
-import { generateResumeApi, refreshCopilotApi, getResumeByIdApi } from "../api/builder.api";
+import { generateResumeApi, refreshCopilotApi, refreshGuestCopilotApi, getResumeByIdApi } from "../api/builder.api";
 import { getAnalysisByIdApi } from "../../dashboard/api/dashboard.api";
 import { A4Canvas } from "../components/A4Canvas/A4Canvas";
-import { InlineAISuggestion } from "../components/AICopilot/InlineAISuggestion";
 import { AIQuestionCard } from "../components/AICopilot/AIQuestionCard";
 import { AuthWallModal } from "../../auth/components/AuthWallModal";
 import styles from "../styles/BuilderPage.module.css";
@@ -29,18 +28,21 @@ const BuilderPage = () => {
         past,
         future,
         dbResumeId,
-        interactionHistory,
-        recordInteraction
+        questionsQueue,
+        setQuestionsQueue,
+        popNextQuestion,
+        recordInteraction,
+        recordQuestionAnswer
     } = useResumeStore();
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [authModalOpen, setAuthModalOpen] = useState(false);
-
-    // AI Copilot State
-    const [activeQuestion, setActiveQuestion] = useState(null);
-    const [activeSuggestions, setActiveSuggestions] = useState([]);
     const [scanning, setScanning] = useState(false);
+    const initialScanDone = useRef(false);
+
+    // Active Question is the head of the questions queue
+    const activeQuestion = questionsQueue && questionsQueue.length > 0 ? questionsQueue[0] : null;
 
     // react-to-print native browser ATS-parsable PDF generator
     const handlePrint = useReactToPrint({
@@ -53,6 +55,7 @@ const BuilderPage = () => {
         const fetchAndGenerate = async () => {
             setLoading(true);
             setError(null);
+            initialScanDone.current = false;
 
             try {
                 if (id && id.startsWith('guest_')) {
@@ -98,29 +101,70 @@ const BuilderPage = () => {
         fetchAndGenerate();
     }, [id, navigate, setResumeData]);
 
-    // 2. Controlled Copilot Refresh Logic
+    // 2. Controlled Copilot Batch Refresh Logic (using fresh store state)
     const handleScanCopilot = useCallback(async () => {
-        if (!dbResumeId && isAuthenticated) return;
+        const state = useResumeStore.getState();
+        if (!state.resumeData) return;
+
         setScanning(true);
         try {
-            if (dbResumeId && isAuthenticated) {
-                const res = await refreshCopilotApi(dbResumeId, interactionHistory);
-                if (res.questions && res.questions.length > 0) {
-                    setActiveQuestion(res.questions[0]);
-                } else {
-                    setActiveQuestion(null);
+            const currentHistory = state.interactionHistory || [];
+            const currentAsked = state.askedQuestions || [];
+
+            let res;
+            if (state.dbResumeId && isAuthenticated) {
+                res = await refreshCopilotApi(
+                    state.dbResumeId,
+                    currentHistory,
+                    currentAsked,
+                    state.resumeData.metadata?.jobDescription || ""
+                );
+            } else {
+                res = await refreshGuestCopilotApi({
+                    currentResume: state.resumeData,
+                    targetRole: state.resumeData.metadata?.targetRole || "",
+                    jobDescription: state.resumeData.metadata?.jobDescription || "",
+                    candidateLevel: state.resumeData.metadata?.candidateLevel || "mid",
+                    jobType: state.resumeData.metadata?.jobType || "technical",
+                    interactionHistory: currentHistory,
+                    askedQuestions: currentAsked
+                });
+            }
+
+            if (res && Array.isArray(res.questions)) {
+                // Filter out any questions already in interactionHistory or askedQuestions
+                const askedIds = new Set([
+                    ...currentHistory,
+                    ...currentAsked.map(q => q.id)
+                ]);
+                const newQuestions = res.questions.filter(q => q && q.id && !askedIds.has(q.id));
+
+                if (newQuestions.length > 0) {
+                    setQuestionsQueue(newQuestions);
                 }
-                setActiveSuggestions(res.suggestions || []);
             }
         } catch (err) {
             console.error("Copilot Scan Error:", err);
         } finally {
             setScanning(false);
         }
-    }, [dbResumeId, isAuthenticated, interactionHistory]);
+    }, [isAuthenticated, setQuestionsQueue]);
 
-    // Handle Question Answers (One-by-One progression with anti-loop record)
+    // 3. Automatic Initial Copilot Scan right after document is ready
+    useEffect(() => {
+        if (!loading && resumeData && !initialScanDone.current) {
+            initialScanDone.current = true;
+            const timer = setTimeout(() => {
+                handleScanCopilot();
+            }, 600);
+            return () => clearTimeout(timer);
+        }
+    }, [loading, resumeData, handleScanCopilot]);
+
+    // Handle Question Answers (One-by-One queue progression with anti-loop memory)
     const handleAnswerQuestion = (question, answerValue) => {
+        if (!question) return;
+
         if (question.targetPath) {
             if (question.type === 'yes_no') {
                 if (answerValue === 'Yes' && question.proposedText) {
@@ -131,24 +175,37 @@ const BuilderPage = () => {
             }
         }
 
+        // Record Q&A and interaction ID
+        recordQuestionAnswer(question, answerValue, false);
         const qId = question.id || question.questionId;
         if (qId) recordInteraction(qId);
-        setActiveQuestion(null);
+
+        // Pop current question from local queue
+        popNextQuestion();
+
+        // Check if queue needs replenishment
+        setTimeout(() => {
+            const currentQueue = useResumeStore.getState().questionsQueue;
+            if (!currentQueue || currentQueue.length === 0) {
+                handleScanCopilot();
+            }
+        }, 150);
+    };
+
+    // Handle Question Skip
+    const handleSkipQuestion = (questionId) => {
+        const currentQ = activeQuestion || { id: questionId };
+        recordQuestionAnswer(currentQ, "SKIPPED", true);
+        if (questionId) recordInteraction(questionId);
+
+        popNextQuestion();
 
         setTimeout(() => {
-            handleScanCopilot();
-        }, 400);
-    };
-
-    const handleSkipQuestion = (questionId) => {
-        if (questionId) recordInteraction(questionId);
-        setActiveQuestion(null);
-        setTimeout(() => handleScanCopilot(), 300);
-    };
-
-    const handleResolveSuggestion = (suggestionId) => {
-        if (suggestionId) recordInteraction(suggestionId);
-        setActiveSuggestions(prev => prev.filter(s => (s.id || s.suggestionId) !== suggestionId));
+            const currentQueue = useResumeStore.getState().questionsQueue;
+            if (!currentQueue || currentQueue.length === 0) {
+                handleScanCopilot();
+            }
+        }, 150);
     };
 
     const togglePersona = (e) => {
@@ -241,13 +298,11 @@ const BuilderPage = () => {
 
                 <div className={styles.headerActions}>
                     {/* Controlled AI Scan Button */}
-                    {isAuthenticated && (
-                        <button className={styles.aiScanBtn} onClick={handleScanCopilot} disabled={scanning}>
-                            <Sparkles size={15} />
-                            <span>{scanning ? "Scanning..." : "Ask Copilot"}</span>
-                            {scanning && <RefreshCw size={12} className={styles.spin} />}
-                        </button>
-                    )}
+                    <button className={styles.aiScanBtn} onClick={handleScanCopilot} disabled={scanning}>
+                        <Sparkles size={15} />
+                        <span>{scanning ? "Scanning..." : (questionsQueue.length > 0 ? `Questions (${questionsQueue.length})` : "Ask Copilot")}</span>
+                        {scanning && <RefreshCw size={12} className={styles.spin} />}
+                    </button>
 
                     {renderSaveStatus()}
 
@@ -267,18 +322,13 @@ const BuilderPage = () => {
                     {/* Single Question Bottom-Docked Card */}
                     {activeQuestion && (
                         <AIQuestionCard
+                            key={activeQuestion.id || activeQuestion.questionId}
                             question={activeQuestion}
                             onAnswer={handleAnswerQuestion}
                             onSkip={handleSkipQuestion}
                             loading={scanning}
                         />
                     )}
-
-                    {/* Spatially Anchored Inline AI Suggestions */}
-                    <InlineAISuggestion
-                        suggestions={activeSuggestions}
-                        onResolve={handleResolveSuggestion}
-                    />
                 </div>
             </div>
         </div>

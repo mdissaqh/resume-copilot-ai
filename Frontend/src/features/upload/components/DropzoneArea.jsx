@@ -5,6 +5,8 @@ import styles from "../styles/DropZoneArea.module.css";
 import { analyzeResumeApi } from "../api/upload.api";
 import { AnalysisResults } from './AnalysisResults';
 import { useAuth } from "../../auth/hooks/useAuth";
+import { CreateScratchModal } from "../../builder/components/CreateScratchModal";
+import { Sparkles } from "lucide-react";
 
 export const DropzoneArea = () => {
     const { isAuthenticated } = useAuth();
@@ -17,6 +19,7 @@ export const DropzoneArea = () => {
     const [error, setError] = useState(null);
     const [errorCode, setErrorCode] = useState(null);
     const [analysisResult, setAnalysisResult] = useState(null);
+    const [scratchModalOpen, setScratchModalOpen] = useState(false);
 
     const onDrop = useCallback((acceptedFiles) => {
         if (acceptedFiles.length > 0) {
@@ -106,15 +109,16 @@ export const DropzoneArea = () => {
     if (errorCode === "INVALID_RESUME") {
         return (
             <div className={styles.container}>
+                <CreateScratchModal isOpen={scratchModalOpen} onClose={() => setScratchModalOpen(false)} />
                 <div style={{ textAlign: 'center', padding: '40px', backgroundColor: '#fff0f0', borderRadius: '12px', border: '1px solid #facdcd' }}>
                     <h2 style={{ color: '#d93025', marginBottom: '16px' }}>Invalid Document Detected</h2>
                     <p style={{ color: '#3c4043', marginBottom: '24px', fontSize: '1.1rem' }}>{error}</p>
-                    <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button onClick={handleReset} style={{ padding: '12px 24px', background: '#fff', border: '1px solid #dadce0', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
                             Try Again
                         </button>
-                        <button onClick={() => navigate('/build')} style={{ padding: '12px 24px', background: '#0066ff', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
-                            Create Resume From Scratch
+                        <button onClick={() => setScratchModalOpen(true)} style={{ padding: '12px 24px', background: '#0066ff', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Sparkles size={16} /> Create Resume From Scratch
                         </button>
                     </div>
                 </div>
@@ -124,8 +128,10 @@ export const DropzoneArea = () => {
 
     return (
         <div className={styles.container}>
+            <CreateScratchModal isOpen={scratchModalOpen} onClose={() => setScratchModalOpen(false)} />
             <h1 className={styles.title}> Upload Your Resume</h1>
             <p className={styles.subtitle}>We accept PDF and DOCX files up to 5MB.</p>
+
             <div {...getRootProps({ className: getDropzoneClassName() })}>
                 <input {...getInputProps()} />
                 <svg className={styles.icon} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -139,6 +145,16 @@ export const DropzoneArea = () => {
                     </p>
                 )}
                 <p className={styles.fileTypes}>PDF or DOCX only</p>
+            </div>
+
+            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Don't have a file ready? </span>
+                <button
+                    onClick={() => setScratchModalOpen(true)}
+                    style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' }}
+                >
+                    Create Resume from Scratch →
+                </button>
             </div>
 
             {error && !errorCode && (

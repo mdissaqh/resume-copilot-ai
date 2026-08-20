@@ -136,64 +136,98 @@ export const transformAndOptimizeResume = async (resumeText, jobDescription) => 
 };
 
 // CONTROLLED REFRESH API SERVICE: Analyzes current resume vs interaction history and returns spatially target-anchored suggestions & structured questions
-export const refreshAICopilot = async ({ currentResume, targetRole, jobDescription, candidateLevel, jobType, interactionHistory = [] }) => {
+export const refreshAICopilot = async ({ currentResume, targetRole, jobDescription, candidateLevel, jobType, interactionHistory = [], askedQuestions = [] }) => {
     try {
         let prompt = `You are ResumeCopilot AI performing an intelligent, state-aware inspection of the current resume.
-        CRITICAL ANTI-LOOP & QUALITY FILTER DIRECTIVE:
-        1. Review the interactionHistory array provided: ${JSON.stringify(interactionHistory)}. You MUST NOT ask about, suggest changes for, or target any nodes associated with these recorded IDs. If a user previously answered, skipped, or rejected a prompt regarding any node or question/suggestion ID in interactionHistory, you are strictly forbidden from bringing it up again.
-        2. QUALITY FILTER: I am providing you the exact current state of the document. If a node (like a project description, experience bullet, or summary) already contains strong action verbs and measurable metrics, DO NOT suggest refining it again. You MUST move on to other missing fields (like missing dates, missing links, or empty summaries). ONLY return a suggestion if the text is objectively poor or missing critical facts.
-
-        CRITICAL RULES:
-        1. SPATIAL TARGETING: Every suggestion and question MUST target a specific node ID in the resume.
+        CRITICAL ANTI-LOOP & UNIQUE QUESTION DIRECTIVE:
+        1. Review interactionHistory: ${JSON.stringify(interactionHistory)} and askedQuestions: ${JSON.stringify(askedQuestions)}.
+           You MUST NOT ask about, suggest changes for, or target any nodes or topics associated with these recorded IDs or previous questions.
+           If the user previously answered, skipped, or dismissed a question about a project URL, GitHub link, missing field, or bullet point, you are STRICTLY FORBIDDEN from asking about it again.
+        2. BATCH GENERATION: Generate a queue of 3 to 5 distinct, high-priority questions in the "questions" array.
+           - Every question MUST have a UNIQUE ID string (e.g. "q_github_link_proj_1", "q_summary_opt", "q_skill_ts", "q_exp_1_metric").
+           - Prioritize missing essential fields (e.g. GitHub/LinkedIn URLs for projects, missing contact details, missing dates, missing summary, or missing key skills from the Job Description).
+           - Also include text enhancement suggestions as "yes_no" questions with a "proposedText".
+        3. SPATIAL TARGETING: Every question MUST target a specific node ID in the resume.
            - Node ID for summary is 'professionalSummary'
            - Node ID for experience items is item._id (e.g. 'exp_1') or item._id + '-bullet-' + index (e.g. 'exp_1-bullet-0')
-           - Node ID for projects is project._id or project._id + '-hl-' + index
+           - Node ID for projects is project._id or project._id + '-hl-' + index or project._id + '-url'
            - Node ID for personal info is 'personalInfo'
-        2. SEQUENTIAL INTERROGATION: Return AT MOST ONE high-priority question in "questions" and AT MOST ONE suggestion in "suggestions". Prioritize missing critical fields (e.g. asking for full name, email, or missing summary via a 'text' input) BEFORE suggesting optimizations (e.g. asking "Did this achieve a measurable result?" via a 'yes_no' input).
-        3. FACT SAFETY: DO NOT invent company names, dates, or metrics. Ask Yes/No or text questions if information is unverified.
         4. QUESTION TYPES:
-           - Use 'yes_no' type for confirmation questions.
-           - Use 'text' type when actual data input is required.
+           - Use 'yes_no' type for confirmation questions (provide 'proposedText' for the user to confirm/accept).
+           - Use 'text' type when actual data input is required (e.g. "What is the GitHub repository URL for 'Fab AI'?", "What was your key achievement in role X?").
 
         Current Resume State: ${JSON.stringify(currentResume)}
         Target Role: "${targetRole || ''}"
         Target Job Description: "${jobDescription || ''}"
 
-        Return JSON matching this structure:
+        Return JSON matching this exact structure:
         {
           "questions": [
             {
-              "id": "q_101",
+              "id": "q_unique_101",
               "type": "yes_no|text",
-              "targetNodeId": "exp_1-bullet-0",
-              "targetPath": ["experience", 0, "achievements", 0],
-              "message": "Did this work achieve a measurable performance improvement?",
-              "proposedText": "Optimized REST APIs, reducing response times by 35% across production microservices."
+              "targetNodeId": "proj_1",
+              "targetPath": ["projects", 0, "githubUrl"],
+              "message": "Please provide the GitHub repository URL for your project 'Fab AI'.",
+              "placeholder": "https://github.com/username/fab-ai"
             }
-          ],
-          "suggestions": [
-            {
-              "id": "s_201",
-              "suggestionId": "s_201",
-              "targetNodeId": "professionalSummary",
-              "targetPath": ["professionalSummary"],
-              "category": "action_verb",
-              "reasoning": "Strengthen summary hook with active leadership verbs.",
-              "originalText": "${currentResume.professionalSummary || ''}",
-              "proposedText": "Results-driven Software Engineer with proven expertise in building scalable cloud solutions..."
-            }
-          ],
-          "analysis": {
-            "missingInformation": ["LinkedIn URL", "GitHub Repository"],
-            "priority": "medium"
-          }
+          ]
         }`;
 
         const result = await model.generateContent(prompt);
         return JSON.parse(result.response.text());
     } catch (error) {
         console.error("Copilot Refresh Error:", error);
-        return { questions: [], suggestions: [], analysis: { missingInformation: [], priority: "low" } };
+        return { questions: [] };
+    }
+};
+
+export const generateScratchResumeAI = async (targetRole = "", jobDescription = "", persona = "experienced", candidateLevel = "mid", jobType = "technical") => {
+    try {
+        let prompt = `You are an elite Executive Resume Writer. Generate a canonical, highly relevant initial resume outline JSON tailored specifically for the target role: "${targetRole}" and job description: "${jobDescription}".
+        
+        CRITICAL RULES:
+        1. Create clean starter text and structure tailored to the target role.
+        2. Set appropriate skill categories matching the target role and job description.
+        3. Do NOT hallucinate personal identity details (leave fullName, email, phone, location as empty strings for user input).
+        4. Include a solid placeholder summary framework tailored to ${targetRole}.
+        5. Provide starter experience/projects bullet frameworks relevant to ${targetRole}.
+        
+        Return JSON matching this exact structure:
+        {
+          "metadata": {
+            "persona": "${persona}",
+            "targetRole": "${targetRole}",
+            "candidateLevel": "${candidateLevel}",
+            "jobType": "${jobType}"
+          },
+          "personalInfo": { "fullName": "", "email": "", "phone": "", "location": "", "links": [] },
+          "professionalSummary": "Results-oriented professional aiming for ${targetRole || 'Software Engineer'} role with expertise in high-impact delivery.",
+          "experience": [],
+          "projects": [],
+          "education": [],
+          "skills": [ { "category": "Core Technical Skills", "items": [] } ],
+          "certifications": [],
+          "achievements": [],
+          "additionalSections": []
+        }`;
+
+        const result = await model.generateContent(prompt);
+        return JSON.parse(result.response.text());
+    } catch (error) {
+        console.error("Scratch AI Generation Error:", error);
+        return {
+            metadata: { persona, targetRole, candidateLevel, jobType },
+            personalInfo: { fullName: '', email: '', phone: '', location: '', links: [] },
+            professionalSummary: targetRole ? `Targeting ${targetRole} position.` : '',
+            experience: [],
+            projects: [],
+            education: [],
+            skills: [{ category: 'Core Skills', items: [] }],
+            certifications: [],
+            achievements: [],
+            additionalSections: []
+        };
     }
 };
 

@@ -206,3 +206,27 @@
 .errorBox {
   color: #dc2626;
 }
+
+@media (max-width: 768px) {
+  .header {
+    height: auto;
+    padding: 10px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .headerLeft {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .headerActions {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .canvasArea {
+    padding: 12px 8px;
+  }
+}

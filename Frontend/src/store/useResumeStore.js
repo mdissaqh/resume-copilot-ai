@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { normalizeResumeData } from '../utils/resumeNormalizer';
 import { setIn, pushIn, removeIn } from '../features/builder/utils/pathHelpers';
 import { saveResumeApi } from '../features/builder/api/builder.api';
+import { updateGuestDraft } from '../utils/guestDraftManager';
 
 const MAX_HISTORY_LENGTH = 30;
 
@@ -10,6 +11,8 @@ export const useResumeStore = create((set, get) => ({
     dbResumeId: null,
     templateId: 'evergreen',
     interactionHistory: [],
+    askedQuestions: [],
+    questionsQueue: [],
     
     // Undo / Redo State
     past: [],
@@ -22,16 +25,29 @@ export const useResumeStore = create((set, get) => ({
     // Hydrate store with loaded document
     setResumeData: (data, dbId = null, template = 'evergreen') => {
         const normalized = normalizeResumeData(data);
-        const history = normalized?.interactionHistory || data?.interactionHistory || [];
+        const history = normalized?.interactionHistory || data?.aiState?.interactionHistory || data?.interactionHistory || [];
+        const asked = data?.aiState?.askedQuestions || data?.askedQuestions || [];
         set({
             resumeData: normalized,
             dbResumeId: dbId,
             templateId: template || 'evergreen',
             interactionHistory: history,
+            askedQuestions: asked,
+            questionsQueue: [],
             past: [],
             future: [],
             saveStatus: 'saved'
         });
+    },
+
+    setQuestionsQueue: (questions) => {
+        set({ questionsQueue: questions || [] });
+    },
+
+    popNextQuestion: () => {
+        set((state) => ({
+            questionsQueue: state.questionsQueue.slice(1)
+        }));
     },
 
     recordInteraction: (id) => {
@@ -48,6 +64,32 @@ export const useResumeStore = create((set, get) => ({
                 saveStatus: 'dirty'
             };
         });
+        get().triggerAutosave();
+    },
+
+    recordQuestionAnswer: (question, answerValue, isSkipped = false) => {
+        if (!question) return;
+        const qId = question.id || question.questionId;
+        const qEntry = {
+            id: qId,
+            question: question.message || question.question,
+            type: question.type,
+            answer: isSkipped ? "SKIPPED" : answerValue,
+            skipped: isSkipped,
+            timestamp: new Date().toISOString()
+        };
+
+        set((state) => {
+            const history = state.interactionHistory.includes(qId) ? state.interactionHistory : [...state.interactionHistory, qId];
+            const filteredAsked = state.askedQuestions.filter(q => q.id !== qId);
+            const updatedAsked = [...filteredAsked, qEntry];
+            return {
+                interactionHistory: history,
+                askedQuestions: updatedAsked,
+                saveStatus: 'dirty'
+            };
+        });
+
         get().triggerAutosave();
     },
 
@@ -215,13 +257,23 @@ export const useResumeStore = create((set, get) => ({
     },
 
     performSave: async () => {
-        const { dbResumeId, resumeData, templateId, saveStatus, interactionHistory } = get();
-        if (!dbResumeId || !resumeData || saveStatus === 'saving') return;
+        const { dbResumeId, resumeData, templateId, saveStatus, interactionHistory, askedQuestions } = get();
+        if (!resumeData || saveStatus === 'saving') return;
+
+        // If guest mode, persist in local storage envelope
+        if (!dbResumeId) {
+            updateGuestDraft(resumeData, {
+                aiState: { interactionHistory, askedQuestions, suggestions: [] }
+            });
+            set({ saveStatus: 'saved' });
+            return;
+        }
 
         set({ saveStatus: 'saving' });
         try {
             const payloadContent = { ...resumeData, interactionHistory };
-            await saveResumeApi(dbResumeId, payloadContent, templateId, null, { interactionHistory });
+            const aiStatePayload = { interactionHistory, askedQuestions };
+            await saveResumeApi(dbResumeId, payloadContent, templateId, resumeData.metadata, aiStatePayload);
             set({ saveStatus: 'saved' });
         } catch (err) {
             console.error("Autosave failed:", err);

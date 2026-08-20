@@ -4,7 +4,8 @@ import {
     extractRawResumeJSON,
     transformAndOptimizeResume,
     refreshAICopilot,
-    refineSectionAI
+    refineSectionAI,
+    generateScratchResumeAI
 } from "../services/ai.service.js";
 import { generatePdfFromHtml } from "../services/pdfGenerator.service.js";
 import { renderResumeToHtml } from "../services/htmlRenderer.service.js";
@@ -58,34 +59,62 @@ export const getResumeById = async (req, res) => {
     }
 };
 
+export const deleteResume = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = await Resume.findOneAndDelete({ _id: id, userId: req.user._id });
+        if (!deleted) return res.status(404).json({ success: false, message: "Resume not found." });
+        res.status(200).json({ success: true, message: "Resume deleted successfully." });
+    } catch (error) {
+        console.error("Error deleting resume:", error);
+        res.status(500).json({ success: false, message: "Failed to delete resume." });
+    }
+};
+
 export const createScratchResume = async (req, res) => {
     try {
-        const { targetRole, jobDescription, persona } = req.body;
+        const { targetRole, jobDescription, persona, candidateLevel, jobType } = req.body;
 
-        const initialDoc = {
-            metadata: {
-                persona: persona || 'experienced',
-                targetRole: targetRole || '',
-                candidateLevel: persona === 'fresher' ? 'entry' : 'mid',
-                jobType: 'technical'
-            },
-            personalInfo: { fullName: '', email: '', phone: '', location: '', links: [] },
-            professionalSummary: '',
-            experience: [],
-            projects: [],
-            education: [],
-            skills: [{ category: 'Core Skills', items: [] }],
-            certifications: [],
-            achievements: [],
-            additionalSections: []
-        };
+        let initialDoc;
+        if (targetRole || jobDescription) {
+            initialDoc = await generateScratchResumeAI(
+                targetRole,
+                jobDescription,
+                persona || 'experienced',
+                candidateLevel || (persona === 'fresher' ? 'entry' : 'mid'),
+                jobType || 'technical'
+            );
+        } else {
+            initialDoc = {
+                metadata: {
+                    persona: persona || 'experienced',
+                    targetRole: targetRole || '',
+                    candidateLevel: persona === 'fresher' ? 'entry' : 'mid',
+                    jobType: 'technical'
+                },
+                personalInfo: { fullName: '', email: '', phone: '', location: '', links: [] },
+                professionalSummary: '',
+                experience: [],
+                projects: [],
+                education: [],
+                skills: [{ category: 'Core Skills', items: [] }],
+                certifications: [],
+                achievements: [],
+                additionalSections: []
+            };
+        }
 
         const newResume = await Resume.create({
             userId: req.user._id,
             title: targetRole ? `${targetRole} Resume` : "My ATS Resume",
             templateId: "evergreen",
             schemaVersion: 3,
-            metadata: initialDoc.metadata,
+            metadata: initialDoc.metadata || {
+                persona: persona || 'experienced',
+                targetRole: targetRole || '',
+                candidateLevel: candidateLevel || 'mid',
+                jobType: jobType || 'technical'
+            },
             originalContent: initialDoc,
             content: initialDoc,
             aiState: { askedQuestions: [], suggestions: [], interactionHistory: [] }
@@ -221,24 +250,71 @@ export const downloadResumePDF = async (req, res) => {
 export const refreshCopilot = async (req, res) => {
     try {
         const { id } = req.params;
-        const { interactionHistory, jobDescription } = req.body;
+        const { interactionHistory, askedQuestions, jobDescription } = req.body;
 
         const resume = await Resume.findOne({ _id: id, userId: req.user._id });
         if (!resume) return res.status(404).json({ success: false, message: "Resume not found." });
 
+        let effectiveJD = jobDescription || "";
+        if (!effectiveJD && resume.analysisId) {
+            const analysis = await Analysis.findById(resume.analysisId);
+            if (analysis) effectiveJD = analysis.jobDescription || "";
+        }
+
+        const effectiveHistory = interactionHistory || resume.aiState?.interactionHistory || [];
+        const effectiveAskedQuestions = askedQuestions || resume.aiState?.askedQuestions || [];
+
         const result = await refreshAICopilot({
             currentResume: resume.content,
             targetRole: resume.metadata?.targetRole || "",
-            jobDescription: jobDescription || "",
+            jobDescription: effectiveJD,
             candidateLevel: resume.metadata?.candidateLevel || "mid",
             jobType: resume.metadata?.jobType || "technical",
-            interactionHistory: interactionHistory || resume.aiState?.interactionHistory || []
+            interactionHistory: effectiveHistory,
+            askedQuestions: effectiveAskedQuestions
         });
+
+        // Persist updated AI state in DB
+        await Resume.updateOne(
+            { _id: id, userId: req.user._id },
+            {
+                $set: {
+                    "aiState.interactionHistory": effectiveHistory,
+                    "aiState.askedQuestions": effectiveAskedQuestions,
+                    "aiState.suggestions": result.suggestions || []
+                }
+            }
+        );
 
         res.status(200).json({ success: true, ...result });
     } catch (error) {
         console.error("Error refreshing Copilot:", error);
         res.status(500).json({ success: false, message: "Failed to refresh Copilot." });
+    }
+};
+
+export const refreshGuestCopilot = async (req, res) => {
+    try {
+        const { currentResume, targetRole, jobDescription, candidateLevel, jobType, interactionHistory, askedQuestions } = req.body;
+
+        if (!currentResume) {
+            return res.status(400).json({ success: false, message: "Current resume state required for guest copilot." });
+        }
+
+        const result = await refreshAICopilot({
+            currentResume,
+            targetRole: targetRole || currentResume.metadata?.targetRole || "",
+            jobDescription: jobDescription || "",
+            candidateLevel: candidateLevel || currentResume.metadata?.candidateLevel || "mid",
+            jobType: jobType || currentResume.metadata?.jobType || "technical",
+            interactionHistory: interactionHistory || [],
+            askedQuestions: askedQuestions || []
+        });
+
+        res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        console.error("Error refreshing Guest Copilot:", error);
+        res.status(500).json({ success: false, message: "Failed to refresh Copilot for guest." });
     }
 };
 
