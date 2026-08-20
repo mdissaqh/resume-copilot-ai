@@ -1,7 +1,7 @@
 .header {
   text-align: center;
-  margin-bottom: 12pt;
-  padding-bottom: 8pt;
+  margin-bottom: 6pt;
+  padding-bottom: 4pt;
   border-bottom: 1.5pt solid #e2e8f0;
 }
 
@@ -11,7 +11,7 @@
   letter-spacing: -0.5px;
   text-transform: uppercase;
   color: #0f172a; /* DARK NEUTRAL BLACK FOR CANDIDATE NAME */
-  margin: 0 0 6pt 0;
+  margin: 0 0 4pt 0;
   line-height: 1.15;
 }
 
@@ -49,8 +49,8 @@
   letter-spacing: 0.5px;
   color: #0284c7; /* CYAN / NAVY BLUE FOR SECTION HEADINGS AS IN IMAGE 4 */
   border-bottom: 1.5pt solid #0284c7;
-  padding-bottom: 3pt;
-  margin: 12pt 0 6pt 0;
+  padding-bottom: 2pt;
+  margin: 6pt 0 3pt 0;
   cursor: pointer;
   transition: color 0.15s ease;
 }
@@ -62,7 +62,7 @@
 }
 
 .blockItem {
-  margin-bottom: 6pt;
+  margin-bottom: 4pt;
   position: relative;
 }
 

@@ -37,11 +37,12 @@ export const migrateGuestResumeApi = async (payload) => {
     return response.data;
 };
 
-export const refreshCopilotApi = async (resumeId, interactionHistory = [], askedQuestions = [], jobDescription = "") => {
+export const refreshCopilotApi = async (resumeId, interactionHistory = [], askedQuestions = [], jobDescription = "", bindingMap = null) => {
     const response = await axiosInstance.post(`/resume/${resumeId}/copilot/refresh`, {
         interactionHistory,
         askedQuestions,
-        jobDescription
+        jobDescription,
+        bindingMap
     });
     return response.data;
 };
@@ -54,4 +55,18 @@ export const refreshGuestCopilotApi = async (payload) => {
 export const refineContentApi = async (existingText, userInstruction, context) => {
     const response = await axiosInstance.post(`/resume/refine`, { existingText, userInstruction, context });
     return response.data;
+};
+
+/**
+ * getCopilotSuggestionsApi — used by AICopilotDrawer.
+ * Hits the same /copilot/refresh endpoint but returns the suggestions array.
+ * This was imported in AICopilotDrawer but was never defined, causing a runtime crash.
+ */
+export const getCopilotSuggestionsApi = async (resumeId) => {
+    const response = await axiosInstance.post(`/resume/${resumeId}/copilot/refresh`, {
+        interactionHistory: [],
+        askedQuestions: [],
+        jobDescription: ''
+    });
+    return { suggestions: response.data?.suggestions || [] };
 };

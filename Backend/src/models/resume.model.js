@@ -29,15 +29,22 @@ const resumeSchema = new mongoose.Schema({
         type: Number,
         default: 3
     },
+    // Top-level metadata — canonical location for all context fields.
+    // The AI, Copilot, builder, and export all read from here.
     metadata: {
-        persona: { type: String, default: "experienced" },
-        targetRole: { type: String, default: "" },
+        persona:        { type: String, default: "experienced" },
+        targetRole:     { type: String, default: "" },
         candidateLevel: { type: String, default: "mid" },
-        jobType: { type: String, default: "technical" }
+        jobType:        { type: String, default: "technical" },
+        // JD context — must survive analysis → builder → Copilot round-trips
+        jobDescription: { type: String, default: "" },
+        jdProvided:     { type: Boolean, default: false },
+        // User-defined section display order (null = use persona default)
+        sectionOrder:   { type: [String], default: null }
     },
     aiState: {
-        askedQuestions: { type: Array, default: [] },
-        suggestions: { type: Array, default: [] },
+        askedQuestions:     { type: Array, default: [] },
+        suggestions:        { type: Array, default: [] },
         interactionHistory: { type: Array, default: [] }
     },
     originalContent: {
@@ -61,15 +68,18 @@ resumeSchema.statics.migrateDocument = function (doc) {
         obj.schemaVersion = 3;
         obj.templateId = obj.templateId || "evergreen";
         obj.metadata = {
-            persona: obj.content?.metadata?.persona || obj.metadata?.persona || "experienced",
-            targetRole: obj.content?.metadata?.targetRole || obj.metadata?.targetRole || "",
+            persona:        obj.content?.metadata?.persona        || obj.metadata?.persona        || "experienced",
+            targetRole:     obj.content?.metadata?.targetRole     || obj.metadata?.targetRole     || "",
             candidateLevel: obj.content?.metadata?.candidateLevel || obj.metadata?.candidateLevel || "mid",
-            jobType: obj.content?.metadata?.jobType || obj.metadata?.jobType || "technical",
+            jobType:        obj.content?.metadata?.jobType        || obj.metadata?.jobType        || "technical",
+            jobDescription: obj.content?.metadata?.jobDescription || obj.metadata?.jobDescription || "",
+            jdProvided:     obj.content?.metadata?.jdProvided     || obj.metadata?.jdProvided     || false,
+            sectionOrder:   obj.content?.metadata?.sectionOrder   || obj.metadata?.sectionOrder   || null,
             ...(obj.metadata || {})
         };
         obj.aiState = {
-            askedQuestions: obj.aiState?.askedQuestions || [],
-            suggestions: obj.aiState?.suggestions || [],
+            askedQuestions:     obj.aiState?.askedQuestions     || [],
+            suggestions:        obj.aiState?.suggestions        || [],
             interactionHistory: obj.aiState?.interactionHistory || []
         };
     }

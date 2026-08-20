@@ -11,13 +11,19 @@ const getDensityClass = (data) => {
 
     let charCount = 0;
     if (data.professionalSummary) charCount += data.professionalSummary.length;
-    data.experience?.forEach(exp => {
+    
+    const expList = Array.isArray(data.experience) ? data.experience : [];
+    expList.forEach(exp => {
         charCount += (exp.role?.length || 0) + (exp.organization?.length || 0) + (exp.description?.length || 0);
-        exp.achievements?.forEach(a => charCount += (a?.length || 0));
+        const achievements = Array.isArray(exp.achievements) ? exp.achievements : [];
+        achievements.forEach(a => charCount += (a?.length || 0));
     });
-    data.projects?.forEach(p => {
+
+    const projList = Array.isArray(data.projects) ? data.projects : [];
+    projList.forEach(p => {
         charCount += (p.title?.length || 0) + (p.description?.length || 0);
-        p.highlights?.forEach(h => charCount += (h?.length || 0));
+        const highlights = Array.isArray(p.highlights) ? p.highlights : [];
+        highlights.forEach(h => charCount += (h?.length || 0));
     });
 
     if (charCount > 3500) return styles.densityCompact;
@@ -71,16 +77,30 @@ export const generateEvergreenBlocks = (data) => {
         </div>
     );
 
-    if (Array.isArray(personalInfo?.links) && personalInfo.links.length > 0) {
-        personalInfo.links.forEach((link, idx) => {
+    const rawLinks = Array.isArray(personalInfo?.links) ? personalInfo.links : (typeof personalInfo?.links === 'string' && personalInfo.links ? [{ platform: 'Link', url: personalInfo.links }] : []);
+    const linksList = [...rawLinks];
+
+    if (personalInfo?.linkedin && typeof personalInfo.linkedin === 'string' && !linksList.some(l => (typeof l === 'object' ? l.url : l) === personalInfo.linkedin)) {
+        linksList.push({ platform: 'LinkedIn', url: personalInfo.linkedin });
+    }
+    if (personalInfo?.github && typeof personalInfo.github === 'string' && !linksList.some(l => (typeof l === 'object' ? l.url : l) === personalInfo.github)) {
+        linksList.push({ platform: 'GitHub', url: personalInfo.github });
+    }
+
+    if (linksList.length > 0) {
+        linksList.forEach((link, idx) => {
+            const linkObj = typeof link === 'string' ? { platform: 'Link', url: link } : link;
+            const labelText = linkObj?.platform || 'Link';
+            const urlText = linkObj?.url || (typeof link === 'string' ? link : '');
+
             contactItems.push(
                 <div key={`link-${idx}`} className={styles.contactItem}>
                     <SmartLinkEditable
                         title="Edit Contact Link"
                         labelPath={['personalInfo', 'links', idx, 'platform']}
                         urlPath={['personalInfo', 'links', idx, 'url']}
-                        label={link?.platform}
-                        url={link?.url}
+                        label={labelText}
+                        url={urlText}
                         defaultLabel="Link"
                         className={styles.link}
                     />
@@ -97,7 +117,7 @@ export const generateEvergreenBlocks = (data) => {
             <button
                 className={styles.addBtn}
                 style={{ fontSize: '7.5pt' }}
-                onClick={() => addArrayItem(['personalInfo', 'links'], { platform: 'Link', url: '' })}
+                onClick={() => addArrayItem(['personalInfo', 'links'], { platform: 'LinkedIn', url: '' })}
             >
                 <Plus size={10} /> Link
             </button>
@@ -146,7 +166,16 @@ export const generateEvergreenBlocks = (data) => {
 
     // --- EXPERIENCE SECTION ---
     const renderExperienceBlocks = () => {
-        const hasItems = experience && experience.length > 0;
+        const rawExpList = Array.isArray(experience) ? experience : [];
+        const isExpEmpty = (exp) => {
+            if (!exp) return true;
+            const r = (exp.role || '').trim();
+            const o = (exp.organization || '').trim();
+            const achs = (Array.isArray(exp.achievements) ? exp.achievements : []).filter(a => a && String(a).trim());
+            return (!r || r === 'Job Title') && (!o || o === 'Company Name') && achs.length === 0;
+        };
+        const expList = rawExpList.filter(exp => !isExpEmpty(exp));
+        const hasItems = expList.length > 0;
         const res = [];
 
         res.push({
@@ -172,8 +201,9 @@ export const generateEvergreenBlocks = (data) => {
         });
 
         if (hasItems) {
-            experience.forEach((exp, idx) => {
+            expList.forEach((exp, idx) => {
                 const expId = exp._id || `exp-${idx}`;
+                const achievementsList = Array.isArray(exp.achievements) ? exp.achievements : [];
 
                 res.push({
                     id: `exp-${expId}`,
@@ -205,25 +235,25 @@ export const generateEvergreenBlocks = (data) => {
                             </div>
                             {exp.description && (
                                 <div className={styles.paragraph}>
-                                    <SmartEditable type="multiline" path={['experience', idx, 'description']} text={exp.description} placeholder="Role overview..." />
+                                    <SmartEditable type="multiline" path={['experience', idx, 'description']} text={exp.description} placeholder="Overview..." />
                                 </div>
                             )}
-                            {exp.achievements?.map((ach, jdx) => (
-                                <div key={`exp-bullet-${jdx}`} className={`${styles.bulletItem} ${densityClass}`} data-node-id={`${expId}-bullet-${jdx}`}>
+                            {achievementsList.map((ach, jdx) => (
+                                <div key={`exp-ach-${jdx}`} className={`${styles.bulletItem} ${densityClass}`} data-node-id={`${expId}-bullet-${jdx}`}>
                                     <span className={styles.bulletPoint}>•</span>
                                     <div className={styles.bulletContent}>
                                         <SmartEditable
                                             type="multiline"
                                             path={['experience', idx, 'achievements', jdx]}
                                             text={ach}
-                                            placeholder="Describe a measurable impact (Backspace when empty to remove)..."
+                                            placeholder="Add bullet point achievement (Backspace when empty to remove)..."
                                             onBackspaceEmpty={() => removeArrayItem(['experience', idx, 'achievements'], jdx)}
                                         />
                                     </div>
                                 </div>
                             ))}
-                            <button className={styles.addBtn} onClick={() => addArrayItem(['experience', idx, 'achievements'], '')}>
-                                <Plus size={12} /> Add Bullet
+                            <button className={styles.addBtn} onClick={() => addArrayItem(['experience'], idx, 'achievements', '')}>
+                                <Plus size={12} /> Add Achievement Bullet
                             </button>
                         </div>
                     )
@@ -231,11 +261,11 @@ export const generateEvergreenBlocks = (data) => {
             });
 
             res.push({
-                id: 'add-experience-btn',
+                id: 'add-exp-btn',
                 type: 'control',
                 content: (
                     <button className={styles.addBtn} style={{ marginTop: 4, marginBottom: 8 }} onClick={() => addArrayItem(['experience'], { _id: generateId(), role: '', organization: '', achievements: [''] })}>
-                        <Plus size={12} /> Add Role
+                        <Plus size={12} /> Add Experience Item
                     </button>
                 )
             });
@@ -246,7 +276,8 @@ export const generateEvergreenBlocks = (data) => {
 
     // --- PROJECTS SECTION ---
     const renderProjectsBlocks = () => {
-        const hasItems = projects && projects.length > 0;
+        const projList = Array.isArray(projects) ? projects : [];
+        const hasItems = projList.length > 0;
         const res = [];
 
         res.push({
@@ -261,7 +292,7 @@ export const generateEvergreenBlocks = (data) => {
                     onDelete={() => deleteSection('projects')}
                     isEmpty={!hasItems}
                 >
-                    <h2 className={styles.sectionTitle}>Projects</h2>
+                    <h2 className={styles.sectionTitle}>Key Projects</h2>
                     {!hasItems && (
                         <div className={styles.emptyPlaceholder} onClick={() => addArrayItem(['projects'], { _id: generateId(), title: '', highlights: [''] })}>
                             <Plus size={14} /> Add Project
@@ -272,8 +303,9 @@ export const generateEvergreenBlocks = (data) => {
         });
 
         if (hasItems) {
-            projects.forEach((proj, idx) => {
+            projList.forEach((proj, idx) => {
                 const projId = proj._id || `proj-${idx}`;
+                const highlightsList = Array.isArray(proj.highlights) ? proj.highlights : [];
 
                 res.push({
                     id: `proj-${projId}`,
@@ -284,70 +316,55 @@ export const generateEvergreenBlocks = (data) => {
                                 <button className={styles.iconBtnDanger} onClick={() => removeArrayItem(['projects'], idx)} title="Delete project"><Trash2 size={13} /></button>
                             </div>
                             <div className={styles.rowBetween}>
-                                <div className={styles.leftCol} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: '1 1 auto', maxWidth: '75%' }}>
-                                    <div className={styles.primaryText} style={{ display: 'inline-flex', alignItems: 'center', maxWidth: '60%', width: 'auto' }}>
-                                        <SmartEditable inline path={['projects', idx, 'title']} text={proj.title} placeholder="Project Title" />
+                                <div className={styles.leftCol}>
+                                    <div className={styles.primaryText}>
+                                        <SmartEditable path={['projects', idx, 'title']} text={proj.title} placeholder="Project Name" />
                                     </div>
-                                    <div className={styles.projectLinks} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                                        {proj.liveUrl ? (
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                                <SmartLinkEditable
-                                                    title="Edit Live Demo Link"
-                                                    labelPath={['projects', idx, 'liveLabel']}
-                                                    urlPath={['projects', idx, 'liveUrl']}
-                                                    label={proj.liveLabel}
-                                                    url={proj.liveUrl}
-                                                    defaultLabel="Live Demo"
-                                                    className={styles.link}
-                                                />
-                                                <button className={styles.iconBtnDanger} style={{ padding: 1 }} onClick={() => updateField(['projects', idx, 'liveUrl'], '')} title="Delete Live Demo link">
-                                                    <Trash2 size={10} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <button className={styles.addBtn} style={{ fontSize: '7.5pt' }} onClick={() => updateField(['projects', idx, 'liveUrl'], 'https://demo.com')}>
-                                                <LinkIcon size={10} /> + Live Demo
-                                            </button>
-                                        )}
-
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                                         {proj.githubUrl ? (
-                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                                <SmartLinkEditable
-                                                    title="Edit GitHub Link"
-                                                    labelPath={['projects', idx, 'githubLabel']}
-                                                    urlPath={['projects', idx, 'githubUrl']}
-                                                    label={proj.githubLabel}
-                                                    url={proj.githubUrl}
-                                                    defaultLabel="GitHub"
-                                                    className={styles.link}
-                                                />
-                                                <button className={styles.iconBtnDanger} style={{ padding: 1 }} onClick={() => updateField(['projects', idx, 'githubUrl'], '')} title="Delete GitHub link">
-                                                    <Trash2 size={10} />
-                                                </button>
-                                            </div>
+                                            <SmartLinkEditable
+                                                title="Edit GitHub Link"
+                                                labelPath={['projects', idx, 'githubPlatform']}
+                                                urlPath={['projects', idx, 'githubUrl']}
+                                                label="GitHub"
+                                                url={proj.githubUrl}
+                                                defaultLabel="GitHub"
+                                                className={styles.link}
+                                            />
                                         ) : (
                                             <button className={styles.addBtn} style={{ fontSize: '7.5pt' }} onClick={() => updateField(['projects', idx, 'githubUrl'], 'https://github.com')}>
                                                 <LinkIcon size={10} /> + GitHub
                                             </button>
                                         )}
+                                        {proj.liveUrl ? (
+                                            <SmartLinkEditable
+                                                title="Edit Live Demo Link"
+                                                labelPath={['projects', idx, 'livePlatform']}
+                                                urlPath={['projects', idx, 'liveUrl']}
+                                                label="Live Demo"
+                                                url={proj.liveUrl}
+                                                defaultLabel="Live Demo"
+                                                className={styles.link}
+                                            />
+                                        ) : (
+                                            <button className={styles.addBtn} style={{ fontSize: '7.5pt' }} onClick={() => updateField(['projects', idx, 'liveUrl'], 'https://demo.com')}>
+                                                <LinkIcon size={10} /> + Live Demo
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                                 <div className={styles.rightCol}>
-                                    {proj.date ? (
-                                        <div className={styles.dateLocation}>
-                                            <SmartEditable inline path={['projects', idx, 'date']} text={proj.date} placeholder="Date" />
-                                        </div>
-                                    ) : (
-                                        <button className={styles.addBtn} style={{ fontSize: '7.5pt' }} onClick={() => updateField(['projects', idx, 'date'], '2024')}>
-                                            <Calendar size={10} /> + Add Date
-                                        </button>
-                                    )}
+                                    <div className={styles.dateLocation}>
+                                        <SmartEditable inline path={['projects', idx, 'date']} text={proj.date} placeholder="2023" />
+                                    </div>
                                 </div>
                             </div>
-                            <div className={styles.secondaryText} style={{ marginTop: 2, width: '100%' }}>
-                                <SmartEditable type="multiline" path={['projects', idx, 'description']} text={proj.description} placeholder="Brief project description..." />
-                            </div>
-                            {proj.highlights?.map((hl, jdx) => (
+                            {proj.description && (
+                                <div className={styles.paragraph}>
+                                    <SmartEditable type="multiline" path={['projects', idx, 'description']} text={proj.description} placeholder="Overview..." />
+                                </div>
+                            )}
+                            {highlightsList.map((hl, jdx) => (
                                 <div key={`proj-hl-${jdx}`} className={`${styles.bulletItem} ${densityClass}`} data-node-id={`${projId}-hl-${jdx}`}>
                                     <span className={styles.bulletPoint}>•</span>
                                     <div className={styles.bulletContent}>
@@ -385,7 +402,8 @@ export const generateEvergreenBlocks = (data) => {
 
     // --- EDUCATION SECTION ---
     const renderEducationBlocks = () => {
-        const hasItems = education && education.length > 0;
+        const eduList = Array.isArray(education) ? education : [];
+        const hasItems = eduList.length > 0;
         const res = [];
 
         res.push({
@@ -411,9 +429,19 @@ export const generateEvergreenBlocks = (data) => {
         });
 
         if (hasItems) {
-            education.forEach((edu, idx) => {
+            eduList.forEach((edu, idx) => {
                 const eduId = edu._id || `edu-${idx}`;
-                const degreeValue = edu.degree || '';
+                
+                let degreeValue = edu.degree || '';
+                const fieldOfStudy = edu.fieldOfStudy || '';
+                const scoreVal = edu.score || edu.cgpa || edu.gpa || '';
+                
+                if (fieldOfStudy && !degreeValue.toLowerCase().includes(fieldOfStudy.toLowerCase())) {
+                    degreeValue = degreeValue ? `${degreeValue} in ${fieldOfStudy}` : fieldOfStudy;
+                }
+                if (scoreVal && !degreeValue.toLowerCase().includes(scoreVal.toLowerCase())) {
+                    degreeValue = degreeValue ? `${degreeValue} • ${scoreVal}` : scoreVal;
+                }
 
                 res.push({
                     id: `edu-${eduId}`,
@@ -429,7 +457,7 @@ export const generateEvergreenBlocks = (data) => {
                                         <SmartEditable path={['education', idx, 'institution']} text={edu.institution} placeholder="University / Institution" />
                                     </div>
                                     <div className={styles.secondaryText}>
-                                        <SmartEditable path={['education', idx, 'degree']} text={degreeValue} placeholder="Degree, Field of Study & Score (e.g. B.E in CSE • 8.5 CGPA)" />
+                                        <SmartEditable path={['education', idx, 'degree']} text={degreeValue} placeholder="Degree, Field of Study & Score" />
                                     </div>
                                 </div>
                                 <div className={styles.rightCol}>
@@ -464,7 +492,8 @@ export const generateEvergreenBlocks = (data) => {
 
     // --- SKILLS SECTION ---
     const renderSkillsBlocks = () => {
-        const hasItems = skills && skills.length > 0;
+        const skillList = Array.isArray(skills) ? skills : [];
+        const hasItems = skillList.length > 0;
         const res = [];
 
         res.push({
@@ -490,8 +519,9 @@ export const generateEvergreenBlocks = (data) => {
         });
 
         if (hasItems) {
-            skills.forEach((skillGroup, idx) => {
+            skillList.forEach((skillGroup, idx) => {
                 const skillId = skillGroup._id || `skill-${idx}`;
+                const skillItemsText = Array.isArray(skillGroup.items) ? skillGroup.items.join(', ') : (skillGroup.items || '');
                 res.push({
                     id: `skill-${skillId}`,
                     type: 'block-item',
@@ -508,7 +538,7 @@ export const generateEvergreenBlocks = (data) => {
                                 <SmartEditable
                                     type="multiline"
                                     path={['skills', idx, 'items']}
-                                    text={Array.isArray(skillGroup.items) ? skillGroup.items.join(', ') : skillGroup.items}
+                                    text={skillItemsText}
                                     placeholder="JavaScript, React, Node.js..."
                                 />
                             </div>
@@ -533,7 +563,8 @@ export const generateEvergreenBlocks = (data) => {
 
     // --- CERTIFICATIONS SECTION ---
     const renderCertificationsBlocks = () => {
-        const hasItems = certifications && certifications.length > 0;
+        const certList = Array.isArray(certifications) ? certifications : [];
+        const hasItems = certList.length > 0;
         const res = [];
 
         res.push({
@@ -559,7 +590,7 @@ export const generateEvergreenBlocks = (data) => {
         });
 
         if (hasItems) {
-            certifications.forEach((cert, idx) => {
+            certList.forEach((cert, idx) => {
                 const certId = cert._id || `cert-${idx}`;
                 res.push({
                     id: `cert-${certId}`,
@@ -623,14 +654,15 @@ export const generateEvergreenBlocks = (data) => {
         return res;
     };
 
-    // --- CUSTOM ADDITIONAL SECTIONS (SINGLE EDITABLE TITLE HEADER) ---
+    // --- CUSTOM ADDITIONAL SECTIONS ---
     const renderCustomSectionsBlocks = () => {
-        const hasItems = additionalSections && additionalSections.length > 0;
-        if (!hasItems) return [];
+        const addList = Array.isArray(additionalSections) ? additionalSections : [];
+        if (addList.length === 0) return [];
         const res = [];
 
-        additionalSections.forEach((sec, idx) => {
+        addList.forEach((sec, idx) => {
             const secId = sec._id || `custom-${idx}`;
+            const itemList = Array.isArray(sec.items) ? sec.items : [];
             res.push({
                 id: `custom-${secId}`,
                 type: 'block-item',
@@ -647,17 +679,20 @@ export const generateEvergreenBlocks = (data) => {
                                 <SmartEditable path={['additionalSections', idx, 'sectionTitle']} text={sec.sectionTitle} placeholder="Custom Section Title" />
                             </h2>
                         </SectionWrapper>
+                        {itemList.map((item, jdx) => {
+                            const itemId = (typeof item === 'object' && item?._id) ? item._id : `custom-item-${jdx}`;
+                            const bulletText = typeof item === 'string' ? item : (item?.description || item?.title || item?.heading || '');
+                            const itemPath = typeof item === 'string' 
+                                ? ['additionalSections', idx, 'items', jdx] 
+                                : ['additionalSections', idx, 'items', jdx, (item && item.description !== undefined) ? 'description' : 'title'];
 
-                        {sec.items?.map((item, jdx) => {
-                            const itemId = item._id || `custom-item-${jdx}`;
-                            const bulletText = typeof item === 'string' ? item : (item.description || item.heading || '');
                             return (
                                 <div key={`custom-item-${itemId}`} className={`${styles.bulletItem} ${densityClass}`} data-node-id={itemId}>
                                     <span className={styles.bulletPoint}>•</span>
                                     <div className={styles.bulletContent}>
                                         <SmartEditable
                                             type="multiline"
-                                            path={['additionalSections', idx, 'items', jdx]}
+                                            path={itemPath}
                                             text={bulletText}
                                             placeholder="Add bullet point text (Backspace when empty to remove)..."
                                             onBackspaceEmpty={() => removeArrayItem(['additionalSections', idx, 'items'], jdx)}
@@ -666,7 +701,6 @@ export const generateEvergreenBlocks = (data) => {
                                 </div>
                             );
                         })}
-
                         <button className={styles.addBtn} style={{ marginTop: 4 }} onClick={() => addArrayItem(['additionalSections', idx, 'items'], '')}>
                             <Plus size={12} /> Add Point
                         </button>

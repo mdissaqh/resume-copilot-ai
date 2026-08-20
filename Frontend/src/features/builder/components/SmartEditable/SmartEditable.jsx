@@ -17,6 +17,17 @@ export const SmartEditable = ({
 }) => {
     const updateField = useResumeStore(state => state.updateField);
     const elementRef = useRef(null);
+    const isFocusedRef = useRef(false);
+
+    const storeValue = Array.isArray(text) ? text.join(', ') : (text ?? '');
+    const [localValue, setLocalValue] = useState(storeValue);
+
+    // Sync storeValue -> localValue only when NOT actively typing/focused
+    useEffect(() => {
+        if (!isFocusedRef.current) {
+            setLocalValue(storeValue);
+        }
+    }, [storeValue]);
 
     const adjustHeight = () => {
         if (type === 'multiline' && elementRef.current) {
@@ -27,17 +38,31 @@ export const SmartEditable = ({
 
     useLayoutEffect(() => {
         adjustHeight();
-    }, [text, type]);
+    }, [localValue, type]);
 
-    const displayValue = Array.isArray(text) ? text.join(', ') : (text ?? '');
-    const handleChange = (e) => {
-        const val = Array.isArray(text) ? e.target.value.split(',').map(s => s.trim()) : e.target.value;
+    const commitChange = (valStr) => {
+        const val = Array.isArray(text) ? valStr.split(',').map(s => s.trim()) : valStr;
         updateField(path, val);
+    };
+
+    const handleChange = (e) => {
+        const newVal = e.target.value;
+        setLocalValue(newVal);
         adjustHeight();
+        commitChange(newVal);
+    };
+
+    const handleFocus = () => {
+        isFocusedRef.current = true;
+    };
+
+    const handleBlur = () => {
+        isFocusedRef.current = false;
+        commitChange(localValue);
     };
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Backspace' && (text === '' || text === null || text === undefined) && onBackspaceEmpty) {
+        if (e.key === 'Backspace' && (localValue === '' || localValue === null || localValue === undefined) && onBackspaceEmpty) {
             e.preventDefault();
             onBackspaceEmpty();
         }
@@ -51,8 +76,8 @@ export const SmartEditable = ({
     const combinedClassName = `${type === 'multiline' ? styles.textarea : styles.input} ${className}`;
     
     // Dynamic width calculation for inline single inputs (e.g. Project Title, Dates)
-    const contentLen = (displayValue !== undefined && displayValue !== null && String(displayValue).length > 0)
-        ? String(displayValue).length
+    const contentLen = (localValue !== undefined && localValue !== null && String(localValue).length > 0)
+        ? String(localValue).length
         : Math.max(String(placeholder || '').length, 2);
     const calculatedSize = inline ? Math.max(contentLen, 2) : undefined;
     const dynamicStyle = inline ? { width: `${Math.max(contentLen, 1)}ch`, maxWidth: '100%' } : undefined;
@@ -63,8 +88,10 @@ export const SmartEditable = ({
                 <textarea
                     ref={elementRef}
                     className={combinedClassName}
-                    value={displayValue}
+                    value={localValue}
                     onChange={handleChange}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
                     rows={1}
@@ -76,8 +103,10 @@ export const SmartEditable = ({
                     size={calculatedSize}
                     style={dynamicStyle}
                     className={combinedClassName}
-                    value={displayValue}
+                    value={localValue}
                     onChange={handleChange}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
                 />
@@ -91,7 +120,7 @@ export const SmartEditable = ({
  * Pre-fills input label text box and renders real <a> tags for 100% clickable PDF export hyperlinks.
  */
 export const SmartLinkEditable = ({
-    title = 'Edit Link',
+    title = 'Edit Link Details',
     labelPath,
     urlPath,
     label,
@@ -114,13 +143,27 @@ export const SmartLinkEditable = ({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isEditing]);
 
+    // Infer platform label from URL if label is generic or empty
+    let inferredLabel = defaultLabel;
+    if (url && typeof url === 'string') {
+        const lowerUrl = url.toLowerCase();
+        if (lowerUrl.includes('linkedin.com')) inferredLabel = 'LinkedIn';
+        else if (lowerUrl.includes('github.com')) inferredLabel = 'GitHub';
+        else if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) inferredLabel = 'Twitter';
+        else if (lowerUrl.includes('leetcode.com')) inferredLabel = 'LeetCode';
+    }
+
     const effectiveLabel = (label !== undefined && label !== null && String(label).trim() !== '') 
         ? label 
-        : defaultLabel;
+        : inferredLabel;
 
     const validHref = (url && String(url).trim())
         ? (String(url).startsWith('http://') || String(url).startsWith('https://') ? url : `https://${url}`)
         : '#';
+
+    const setQuickTag = (tag) => {
+        if (labelPath) updateField(labelPath, tag);
+    };
 
     return (
         <div className={styles.inlineWrapper} ref={containerRef} style={{ position: 'relative', display: 'inline-flex' }}>
@@ -141,17 +184,38 @@ export const SmartLinkEditable = ({
             {isEditing && (
                 <div className={styles.linkPopover}>
                     <div className={styles.linkPopoverHeader}>{title}</div>
+                    <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
+                        {['LinkedIn', 'GitHub', 'Portfolio', 'Website', 'LeetCode'].map(tag => (
+                            <button
+                                key={tag}
+                                type="button"
+                                style={{
+                                    fontSize: '10px',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #bfdbfe',
+                                    background: effectiveLabel === tag ? '#2563eb' : '#eff6ff',
+                                    color: effectiveLabel === tag ? '#fff' : '#2563eb',
+                                    cursor: 'pointer',
+                                    fontWeight: 600
+                                }}
+                                onClick={() => setQuickTag(tag)}
+                            >
+                                {tag}
+                            </button>
+                        ))}
+                    </div>
                     <input
                         className={styles.linkInput}
-                        placeholder={`Label (e.g. ${defaultLabel})`}
-                        value={label !== undefined && label !== null && label !== '' ? label : defaultLabel}
-                        onChange={(e) => updateField(labelPath, e.target.value)}
+                        placeholder={`Showcase Name (e.g. ${defaultLabel})`}
+                        value={label !== undefined && label !== null && label !== '' ? label : effectiveLabel}
+                        onChange={(e) => labelPath && updateField(labelPath, e.target.value)}
                     />
                     <input
                         className={styles.linkInput}
-                        placeholder="URL (e.g. https://...)"
+                        placeholder="URL (e.g. https://linkedin.com/in/...)"
                         value={url ?? ''}
-                        onChange={(e) => updateField(urlPath, e.target.value)}
+                        onChange={(e) => urlPath && updateField(urlPath, e.target.value)}
                     />
                     <button className={styles.linkCloseBtn} onClick={() => setIsEditing(false)}>Done</button>
                 </div>

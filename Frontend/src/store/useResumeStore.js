@@ -3,6 +3,8 @@ import { normalizeResumeData } from '../utils/resumeNormalizer';
 import { setIn, pushIn, removeIn } from '../features/builder/utils/pathHelpers';
 import { saveResumeApi } from '../features/builder/api/builder.api';
 import { updateGuestDraft } from '../utils/guestDraftManager';
+import { applyAIMutation } from '../utils/resumeMutationEngine';
+import { buildBindingMap } from '../utils/resumeBindingMap';
 
 const MAX_HISTORY_LENGTH = 30;
 
@@ -13,7 +15,7 @@ export const useResumeStore = create((set, get) => ({
     interactionHistory: [],
     askedQuestions: [],
     questionsQueue: [],
-    
+
     // Undo / Redo State
     past: [],
     future: [],
@@ -26,7 +28,7 @@ export const useResumeStore = create((set, get) => ({
     setResumeData: (data, dbId = null, template = 'evergreen') => {
         const normalized = normalizeResumeData(data);
         const history = normalized?.interactionHistory || data?.aiState?.interactionHistory || data?.interactionHistory || [];
-        const asked = data?.aiState?.askedQuestions || data?.askedQuestions || [];
+        const asked   = data?.aiState?.askedQuestions  || data?.askedQuestions || [];
         set({
             resumeData: normalized,
             dbResumeId: dbId,
@@ -55,7 +57,7 @@ export const useResumeStore = create((set, get) => ({
         set((state) => {
             if (state.interactionHistory.includes(id)) return state;
             const updatedHistory = [...state.interactionHistory, id];
-            const updatedResume = state.resumeData
+            const updatedResume  = state.resumeData
                 ? { ...state.resumeData, interactionHistory: updatedHistory }
                 : state.resumeData;
             return {
@@ -71,26 +73,91 @@ export const useResumeStore = create((set, get) => ({
         if (!question) return;
         const qId = question.id || question.questionId;
         const qEntry = {
-            id: qId,
-            question: question.message || question.question,
-            type: question.type,
-            answer: isSkipped ? "SKIPPED" : answerValue,
-            skipped: isSkipped,
+            id:        qId,
+            question:  question.message || question.question,
+            type:      question.type,
+            // Store targetRef (new contract) for precise anti-loop matching
+            targetRef: question.targetRef || null,
+            // Keep legacy targetPath for backward compat
+            targetPath: question.targetPath || null,
+            answer:    isSkipped ? "SKIPPED" : answerValue,
+            skipped:   isSkipped,
             timestamp: new Date().toISOString()
         };
 
         set((state) => {
-            const history = state.interactionHistory.includes(qId) ? state.interactionHistory : [...state.interactionHistory, qId];
+            const history       = state.interactionHistory.includes(qId) ? state.interactionHistory : [...state.interactionHistory, qId];
             const filteredAsked = state.askedQuestions.filter(q => q.id !== qId);
-            const updatedAsked = [...filteredAsked, qEntry];
+            const updatedAsked  = [...filteredAsked, qEntry];
             return {
                 interactionHistory: history,
-                askedQuestions: updatedAsked,
-                saveStatus: 'dirty'
+                askedQuestions:     updatedAsked,
+                saveStatus:         'dirty'
             };
         });
 
         get().triggerAutosave();
+    },
+
+    /**
+     * Apply an AI question answer using the typed mutation engine.
+     * This is the canonical way to handle AI-driven mutations — NOT raw updateField calls.
+     * Returns { appliedPath, description } for diagnostics.
+     */
+    applyAIMutation: (question, answerValue) => {
+        const state = get();
+        if (!state.resumeData || !question) return { appliedPath: null, description: 'No-op' };
+
+        state.recordHistory();
+
+        // Build binding map from current state for accurate path resolution
+        const bindingMap = buildBindingMap(state.resumeData);
+
+        const { resumeData: updatedResume, appliedPath, description } = applyAIMutation({
+            question,
+            answerValue,
+            resumeData: state.resumeData,
+            bindingMap
+        });
+
+        if (process.env.NODE_ENV === 'development' || window?.__RESUME_DEBUG__) {
+            console.log(`[MutationEngine] ${description}`, { appliedPath, question: question.id });
+        }
+
+        set({ resumeData: updatedResume, saveStatus: 'dirty' });
+        get().triggerAutosave();
+        return { appliedPath, description };
+    },
+
+    /**
+     * Ensure a section key exists in metadata.sectionOrder.
+     * Called after creating a new collection item so the section
+     * automatically becomes visible in the A4 renderer.
+     */
+    ensureSectionInOrder: (sectionKey) => {
+        const state = get();
+        if (!state.resumeData || !sectionKey) return;
+
+        // Map of data keys → section order keys
+        const orderKeyMap = {
+            experience: 'experience',
+            projects:   'projects',
+            education:  'education',
+            skills:     'skills',
+            certifications: 'certifications',
+            additionalSections: 'additionalSections',
+            professionalSummary: 'summary'
+        };
+        const orderKey = orderKeyMap[sectionKey] || sectionKey;
+
+        const currentOrder = Array.isArray(state.resumeData.metadata?.sectionOrder)
+            ? state.resumeData.metadata.sectionOrder
+            : null;
+
+        // Only act if a custom order is set and the key is missing
+        if (currentOrder && !currentOrder.includes(orderKey)) {
+            get().updateField(['metadata', 'sectionOrder'], [...currentOrder, orderKey]);
+        }
     },
 
     setTemplateId: (templateId) => {
@@ -110,17 +177,10 @@ export const useResumeStore = create((set, get) => ({
     undo: () => {
         const { past, future, resumeData } = get();
         if (past.length === 0) return;
-
         const previousState = JSON.parse(past[past.length - 1]);
-        const newPast = past.slice(0, past.length - 1);
-        const newFuture = [JSON.stringify(resumeData), ...future];
-
-        set({
-            resumeData: previousState,
-            past: newPast,
-            future: newFuture,
-            saveStatus: 'dirty'
-        });
+        const newPast       = past.slice(0, past.length - 1);
+        const newFuture     = [JSON.stringify(resumeData), ...future];
+        set({ resumeData: previousState, past: newPast, future: newFuture, saveStatus: 'dirty' });
         get().triggerAutosave();
     },
 
@@ -128,22 +188,19 @@ export const useResumeStore = create((set, get) => ({
     redo: () => {
         const { past, future, resumeData } = get();
         if (future.length === 0) return;
-
-        const nextState = JSON.parse(future[0]);
-        const newFuture = future.slice(1);
-        const newPast = [...past, JSON.stringify(resumeData)];
-
-        set({
-            resumeData: nextState,
-            past: newPast,
-            future: newFuture,
-            saveStatus: 'dirty'
-        });
+        const nextState  = JSON.parse(future[0]);
+        const newFuture  = future.slice(1);
+        const newPast    = [...past, JSON.stringify(resumeData)];
+        set({ resumeData: nextState, past: newPast, future: newFuture, saveStatus: 'dirty' });
         get().triggerAutosave();
     },
 
     // Field mutation helpers
     updateField: (pathArray, value) => {
+        // Safety guard: NEVER allow the literal strings "Yes" or "No" to overwrite resume content
+        if (typeof value === 'string' && (value.trim() === 'Yes' || value.trim() === 'No')) {
+            return;
+        }
         get().recordHistory();
         set((state) => {
             if (!state.resumeData) return state;
@@ -179,6 +236,25 @@ export const useResumeStore = create((set, get) => ({
         get().triggerAutosave();
     },
 
+    /**
+     * Update a specific array item identified by its stable _id.
+     * Safer than index-based updates because _id is stable across re-renders.
+     */
+    updateArrayItem: (collection, itemId, fields) => {
+        const state = get();
+        if (!state.resumeData || !collection || !itemId) return;
+        const arr = Array.isArray(state.resumeData[collection]) ? state.resumeData[collection] : [];
+        const idx = arr.findIndex(item => item._id === itemId);
+        if (idx < 0) return;
+        get().recordHistory();
+        const updatedItem = { ...arr[idx], ...fields };
+        set((st) => ({
+            resumeData: setIn(st.resumeData, [collection, idx], updatedItem),
+            saveStatus: 'dirty'
+        }));
+        get().triggerAutosave();
+    },
+
     // Section Ordering Helpers
     getSectionOrder: () => {
         const state = get();
@@ -200,9 +276,7 @@ export const useResumeStore = create((set, get) => ({
         const idx = currentOrder.indexOf(sectionKey);
         if (idx <= 0) return;
         const newOrder = [...currentOrder];
-        const temp = newOrder[idx - 1];
-        newOrder[idx - 1] = newOrder[idx];
-        newOrder[idx] = temp;
+        [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
         get().updateField(['metadata', 'sectionOrder'], newOrder);
     },
 
@@ -211,9 +285,7 @@ export const useResumeStore = create((set, get) => ({
         const idx = currentOrder.indexOf(sectionKey);
         if (idx < 0 || idx >= currentOrder.length - 1) return;
         const newOrder = [...currentOrder];
-        const temp = newOrder[idx + 1];
-        newOrder[idx + 1] = newOrder[idx];
-        newOrder[idx] = temp;
+        [newOrder[idx + 1], newOrder[idx]] = [newOrder[idx], newOrder[idx + 1]];
         get().updateField(['metadata', 'sectionOrder'], newOrder);
     },
 
@@ -248,11 +320,7 @@ export const useResumeStore = create((set, get) => ({
     triggerAutosave: () => {
         const { saveTimer } = get();
         if (saveTimer) clearTimeout(saveTimer);
-
-        const newTimer = setTimeout(() => {
-            get().performSave();
-        }, 1500);
-
+        const newTimer = setTimeout(() => { get().performSave(); }, 1500);
         set({ saveTimer: newTimer });
     },
 
@@ -271,7 +339,8 @@ export const useResumeStore = create((set, get) => ({
 
         set({ saveStatus: 'saving' });
         try {
-            const payloadContent = { ...resumeData, interactionHistory };
+            // Always send schemaVersion: 3 explicitly so the backend never downgrades
+            const payloadContent = { ...resumeData, schemaVersion: 3, interactionHistory };
             const aiStatePayload = { interactionHistory, askedQuestions };
             await saveResumeApi(dbResumeId, payloadContent, templateId, resumeData.metadata, aiStatePayload);
             set({ saveStatus: 'saved' });

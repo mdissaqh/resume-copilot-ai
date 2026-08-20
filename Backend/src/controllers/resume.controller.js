@@ -90,7 +90,9 @@ export const createScratchResume = async (req, res) => {
                     persona: persona || 'experienced',
                     targetRole: targetRole || '',
                     candidateLevel: persona === 'fresher' ? 'entry' : 'mid',
-                    jobType: 'technical'
+                    jobType: 'technical',
+                    jdProvided: false,
+                    jobDescription: ''
                 },
                 personalInfo: { fullName: '', email: '', phone: '', location: '', links: [] },
                 professionalSummary: '',
@@ -104,19 +106,24 @@ export const createScratchResume = async (req, res) => {
             };
         }
 
+        // Always persist jobDescription in metadata so it's available during Copilot audits
+        const resolvedMetadata = {
+            persona:        initialDoc.metadata?.persona        || persona        || 'experienced',
+            targetRole:     initialDoc.metadata?.targetRole     || targetRole     || '',
+            candidateLevel: initialDoc.metadata?.candidateLevel || candidateLevel || 'mid',
+            jobType:        initialDoc.metadata?.jobType        || jobType        || 'technical',
+            jobDescription: jobDescription || '',
+            jdProvided:     Boolean(jobDescription)
+        };
+
         const newResume = await Resume.create({
             userId: req.user._id,
             title: targetRole ? `${targetRole} Resume` : "My ATS Resume",
             templateId: "evergreen",
             schemaVersion: 3,
-            metadata: initialDoc.metadata || {
-                persona: persona || 'experienced',
-                targetRole: targetRole || '',
-                candidateLevel: candidateLevel || 'mid',
-                jobType: jobType || 'technical'
-            },
-            originalContent: initialDoc,
-            content: initialDoc,
+            metadata: resolvedMetadata,
+            originalContent: { ...initialDoc, metadata: resolvedMetadata },
+            content: { ...initialDoc, metadata: resolvedMetadata, schemaVersion: 3 },
             aiState: { askedQuestions: [], suggestions: [], interactionHistory: [] }
         });
 
@@ -168,15 +175,25 @@ export const generateResume = async (req, res) => {
             transformAndOptimizeResume(analysis.extractedText, analysis.jobDescription).catch(() => ({}))
         ]);
 
+        // Persist JD context in resume.metadata so it's available during Copilot audits
+        const resolvedMetadata = {
+            persona:        structuredResume.metadata?.persona        || 'experienced',
+            targetRole:     structuredResume.metadata?.targetRole     || '',
+            candidateLevel: structuredResume.metadata?.candidateLevel || 'mid',
+            jobType:        structuredResume.metadata?.jobType        || 'technical',
+            jobDescription: analysis.jobDescription || '',
+            jdProvided:     Boolean(analysis.jobDescription)
+        };
+
         const newResume = await Resume.create({
-            userId: req.user._id,
-            analysisId: analysis._id,
-            title: analysis.title || "My ATS Resume",
+            userId:          req.user._id,
+            analysisId:      analysis._id,
+            title:           analysis.title || "My ATS Resume",
             originalContent: rawResume,
-            content: structuredResume,
-            templateId: "evergreen",
-            schemaVersion: 3,
-            metadata: structuredResume.metadata || { persona: "experienced", targetRole: "" }
+            content:         { ...structuredResume, metadata: resolvedMetadata, schemaVersion: 3 },
+            templateId:      "evergreen",
+            schemaVersion:   3,
+            metadata:        resolvedMetadata
         });
 
         await Analysis.updateOne({ _id: analysis._id }, { $set: { resumeId: newResume._id } });
@@ -202,14 +219,22 @@ export const updateResume = async (req, res) => {
         const existingDoc = await Resume.findOne({ _id: id, userId: req.user._id });
         if (!existingDoc) return res.status(404).json({ success: false, message: "Resume not found." });
 
-        // Update working content and update originalContent verified facts set to include manual edits
+        // Merge metadata carefully — preserve jobDescription and sectionOrder from existing
+        const mergedMetadata = metadata ? {
+            ...existingDoc.metadata.toObject?.() || existingDoc.metadata,
+            ...metadata,
+            // Never lose the JD from an autosave that doesn't include it
+            jobDescription: metadata.jobDescription || existingDoc.metadata?.jobDescription || '',
+            jdProvided:     metadata.jdProvided !== undefined ? metadata.jdProvided : existingDoc.metadata?.jdProvided || false
+        } : undefined;
+
         const updatedResume = await Resume.findOneAndUpdate(
             { _id: id, userId: req.user._id },
             {
                 content,
                 templateId: templateId || existingDoc.templateId || "evergreen",
                 schemaVersion: 3,
-                ...(metadata && { metadata }),
+                ...(mergedMetadata && { metadata: mergedMetadata }),
                 ...(aiState && { aiState }),
                 // Record user manual edits as verified facts in originalContent
                 originalContent: {
@@ -234,7 +259,7 @@ export const downloadResumePDF = async (req, res) => {
         const resume = await Resume.findOne({ _id: id, userId: req.user._id });
         if (!resume) return res.status(404).json({ success: false, message: "Resume not found." });
 
-        const html = renderResumeToHtml(resume.content);
+        const html = renderResumeToHtml(resume.content, resume.metadata);
         const pdfBuffer = await generatePdfFromHtml(html);
 
         const safeName = (resume.content?.personalInfo?.fullName || 'Resume').replace(/\s+/g, '_');
@@ -250,28 +275,32 @@ export const downloadResumePDF = async (req, res) => {
 export const refreshCopilot = async (req, res) => {
     try {
         const { id } = req.params;
-        const { interactionHistory, askedQuestions, jobDescription } = req.body;
+        // CRITICAL: always use fresh client-provided state, not stale DB aiState
+        const { interactionHistory, askedQuestions, jobDescription, bindingMap } = req.body;
 
         const resume = await Resume.findOne({ _id: id, userId: req.user._id });
         if (!resume) return res.status(404).json({ success: false, message: "Resume not found." });
 
-        let effectiveJD = jobDescription || "";
+        // JD resolution priority: client body → resume.metadata → linked analysis
+        let effectiveJD = jobDescription || resume.metadata?.jobDescription || "";
         if (!effectiveJD && resume.analysisId) {
             const analysis = await Analysis.findById(resume.analysisId);
             if (analysis) effectiveJD = analysis.jobDescription || "";
         }
 
-        const effectiveHistory = interactionHistory || resume.aiState?.interactionHistory || [];
-        const effectiveAskedQuestions = askedQuestions || resume.aiState?.askedQuestions || [];
+        // Always use the fresh client-provided history (not stale DB values)
+        const effectiveHistory = Array.isArray(interactionHistory) ? interactionHistory : (resume.aiState?.interactionHistory || []);
+        const effectiveAskedQuestions = Array.isArray(askedQuestions) ? askedQuestions : (resume.aiState?.askedQuestions || []);
 
         const result = await refreshAICopilot({
-            currentResume: resume.content,
-            targetRole: resume.metadata?.targetRole || "",
-            jobDescription: effectiveJD,
-            candidateLevel: resume.metadata?.candidateLevel || "mid",
-            jobType: resume.metadata?.jobType || "technical",
+            currentResume:    resume.content,
+            targetRole:       resume.metadata?.targetRole      || "",
+            jobDescription:   effectiveJD,
+            candidateLevel:   resume.metadata?.candidateLevel  || "mid",
+            jobType:          resume.metadata?.jobType         || "technical",
             interactionHistory: effectiveHistory,
-            askedQuestions: effectiveAskedQuestions
+            askedQuestions:     effectiveAskedQuestions,
+            bindingMap:         bindingMap || null   // ← pass client binding map to AI
         });
 
         // Persist updated AI state in DB
@@ -280,11 +309,17 @@ export const refreshCopilot = async (req, res) => {
             {
                 $set: {
                     "aiState.interactionHistory": effectiveHistory,
-                    "aiState.askedQuestions": effectiveAskedQuestions,
-                    "aiState.suggestions": result.suggestions || []
+                    "aiState.askedQuestions":     effectiveAskedQuestions,
+                    "aiState.suggestions":        result.suggestions || []
                 }
             }
         );
+
+        // Diagnostic logging — remove after pipeline is verified
+        console.log(`[refreshCopilot] Resume ${id} | isComplete=${result.isComplete} | questions=${result.questions?.length ?? 0}`);
+        if (result.questions?.length > 0) {
+            console.log(`[refreshCopilot] Question IDs: ${result.questions.map(q => q.id).join(', ')}`);
+        }
 
         res.status(200).json({ success: true, ...result });
     } catch (error) {
@@ -295,7 +330,7 @@ export const refreshCopilot = async (req, res) => {
 
 export const refreshGuestCopilot = async (req, res) => {
     try {
-        const { currentResume, targetRole, jobDescription, candidateLevel, jobType, interactionHistory, askedQuestions } = req.body;
+        const { currentResume, targetRole, jobDescription, candidateLevel, jobType, interactionHistory, askedQuestions, bindingMap } = req.body;
 
         if (!currentResume) {
             return res.status(400).json({ success: false, message: "Current resume state required for guest copilot." });
@@ -303,14 +338,16 @@ export const refreshGuestCopilot = async (req, res) => {
 
         const result = await refreshAICopilot({
             currentResume,
-            targetRole: targetRole || currentResume.metadata?.targetRole || "",
-            jobDescription: jobDescription || "",
-            candidateLevel: candidateLevel || currentResume.metadata?.candidateLevel || "mid",
-            jobType: jobType || currentResume.metadata?.jobType || "technical",
+            targetRole:       targetRole    || currentResume.metadata?.targetRole    || "",
+            jobDescription:   jobDescription || currentResume.metadata?.jobDescription || "",
+            candidateLevel:   candidateLevel || currentResume.metadata?.candidateLevel || "mid",
+            jobType:          jobType        || currentResume.metadata?.jobType        || "technical",
             interactionHistory: interactionHistory || [],
-            askedQuestions: askedQuestions || []
+            askedQuestions:     askedQuestions     || [],
+            bindingMap:         bindingMap         || null
         });
 
+        console.log(`[refreshGuestCopilot] isComplete=${result.isComplete} | questions=${result.questions?.length ?? 0}`);
         res.status(200).json({ success: true, ...result });
     } catch (error) {
         console.error("Error refreshing Guest Copilot:", error);
@@ -338,7 +375,7 @@ export const migrateGuestResume = async (req, res) => {
             return res.status(400).json({ success: false, message: "No guest resume data provided." });
         }
 
-        // Idempotency check: if guestDraftId was already migrated for this user, return existing resume
+        // Idempotency check
         if (guestDraftId) {
             const existingResume = await Resume.findOne({ userId: req.user._id, guestDraftId });
             if (existingResume) {
@@ -354,25 +391,35 @@ export const migrateGuestResume = async (req, res) => {
         let analysisId = null;
         if (guestAnalysis && guestAnalysis.extractedText) {
             const newAnalysis = await Analysis.create({
-                userId: req.user._id,
-                title: guestAnalysis.analysisTitle || "Guest Resume Analysis",
-                extractedText: guestAnalysis.extractedText,
-                jobDescription: guestAnalysis.jobDescription || "",
+                userId:          req.user._id,
+                title:           guestAnalysis.analysisTitle || "Guest Resume Analysis",
+                extractedText:   guestAnalysis.extractedText,
+                jobDescription:  guestAnalysis.jobDescription || "",
                 analysisResults: guestAnalysis.analysisResult || guestAnalysis
             });
             analysisId = newAnalysis._id;
         }
 
+        // Preserve metadata including JD context from guest draft
+        const resolvedMetadata = {
+            persona:        guestResume.metadata?.persona        || 'experienced',
+            targetRole:     guestResume.metadata?.targetRole     || '',
+            candidateLevel: guestResume.metadata?.candidateLevel || 'mid',
+            jobType:        guestResume.metadata?.jobType        || 'technical',
+            jobDescription: guestResume.metadata?.jobDescription || guestAnalysis?.jobDescription || '',
+            jdProvided:     Boolean(guestResume.metadata?.jobDescription || guestAnalysis?.jobDescription)
+        };
+
         const newResume = await Resume.create({
-            userId: req.user._id,
-            analysisId: analysisId,
-            guestDraftId: guestDraftId || null,
-            title: guestResume.metadata?.targetRole ? `${guestResume.metadata.targetRole} Resume` : "My ATS Resume",
+            userId:          req.user._id,
+            analysisId:      analysisId,
+            guestDraftId:    guestDraftId || null,
+            title: resolvedMetadata.targetRole ? `${resolvedMetadata.targetRole} Resume` : "My ATS Resume",
             originalContent: guestResume,
-            content: guestResume,
-            templateId: "evergreen",
-            schemaVersion: 3,
-            metadata: guestResume.metadata || { persona: "experienced", targetRole: "" },
+            content:         { ...guestResume, metadata: resolvedMetadata, schemaVersion: 3 },
+            templateId:      "evergreen",
+            schemaVersion:   3,
+            metadata:        resolvedMetadata,
             aiState: aiState || { interactionHistory: interactionHistory || [], askedQuestions: [], suggestions: [] }
         });
 

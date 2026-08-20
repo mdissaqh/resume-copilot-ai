@@ -10,6 +10,7 @@ import styles from "../styles/BuilderPage.module.css";
 import { useResumeStore } from "../../../store/useResumeStore";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { getGuestDraft, createGuestDraft } from "../../../utils/guestDraftManager";
+import { buildBindingMap, serializeBindingMapForAI } from "../../../utils/resumeBindingMap";
 import { Download, ArrowLeft, UserCircle, Undo2, Redo2, CloudCheck, CloudUpload, AlertCircle, Sparkles, RefreshCw } from 'lucide-react';
 
 const BuilderPage = () => {
@@ -22,6 +23,8 @@ const BuilderPage = () => {
         resumeData,
         setResumeData,
         updateField,
+        applyAIMutation,
+        ensureSectionInOrder,
         saveStatus,
         undo,
         redo,
@@ -39,6 +42,7 @@ const BuilderPage = () => {
     const [error, setError] = useState(null);
     const [authModalOpen, setAuthModalOpen] = useState(false);
     const [scanning, setScanning] = useState(false);
+    const [finalSummary, setFinalSummary] = useState(null);
     const initialScanDone = useRef(false);
 
     // Active Question is the head of the questions queue
@@ -56,6 +60,7 @@ const BuilderPage = () => {
             setLoading(true);
             setError(null);
             initialScanDone.current = false;
+            setFinalSummary(null);
 
             try {
                 if (id && id.startsWith('guest_')) {
@@ -78,13 +83,6 @@ const BuilderPage = () => {
 
                     if (data && data.resume) {
                         setResumeData(data.resume.content, data.resume._id, data.resume.templateId);
-                        if (data.resume.analysisId) {
-                            try {
-                                await getAnalysisByIdApi(data.resume.analysisId);
-                            } catch {
-                                console.warn("Analysis details not attached.");
-                            }
-                        }
                     }
                 } else {
                     const draft = createGuestDraft();
@@ -101,15 +99,27 @@ const BuilderPage = () => {
         fetchAndGenerate();
     }, [id, navigate, setResumeData]);
 
-    // 2. Controlled Copilot Batch Refresh Logic (using fresh store state)
+    // 2. Controlled Copilot Batch Refresh Logic (always uses fresh store state)
     const handleScanCopilot = useCallback(async () => {
+        // Always read from store directly to avoid stale closures
         const state = useResumeStore.getState();
         if (!state.resumeData) return;
 
         setScanning(true);
         try {
             const currentHistory = state.interactionHistory || [];
-            const currentAsked = state.askedQuestions || [];
+            const currentAsked   = state.askedQuestions     || [];
+
+            // Build the deterministic binding map from current resume state
+            // This is sent to the AI so it can reference REAL node IDs
+            const bindingMap = buildBindingMap(state.resumeData);
+            const serializedBindingMap = {
+                nodes: Object.fromEntries(
+                    Object.entries(bindingMap.nodes)
+                        .filter(([, node]) => node.nodeId && !node.field)
+                        .slice(0, 60)
+                )
+            };
 
             let res;
             if (state.dbResumeId && isAuthenticated) {
@@ -117,30 +127,84 @@ const BuilderPage = () => {
                     state.dbResumeId,
                     currentHistory,
                     currentAsked,
-                    state.resumeData.metadata?.jobDescription || ""
+                    state.resumeData.metadata?.jobDescription || "",
+                    serializedBindingMap  // ← NEW: pass binding map to backend/AI
                 );
             } else {
                 res = await refreshGuestCopilotApi({
-                    currentResume: state.resumeData,
-                    targetRole: state.resumeData.metadata?.targetRole || "",
-                    jobDescription: state.resumeData.metadata?.jobDescription || "",
-                    candidateLevel: state.resumeData.metadata?.candidateLevel || "mid",
-                    jobType: state.resumeData.metadata?.jobType || "technical",
+                    currentResume:      state.resumeData,
+                    targetRole:         state.resumeData.metadata?.targetRole      || "",
+                    jobDescription:     state.resumeData.metadata?.jobDescription  || "",
+                    candidateLevel:     state.resumeData.metadata?.candidateLevel  || "mid",
+                    jobType:            state.resumeData.metadata?.jobType         || "technical",
                     interactionHistory: currentHistory,
-                    askedQuestions: currentAsked
+                    askedQuestions:     currentAsked,
+                    bindingMap:         serializedBindingMap  // ← NEW
                 });
             }
 
-            if (res && Array.isArray(res.questions)) {
-                // Filter out any questions already in interactionHistory or askedQuestions
-                const askedIds = new Set([
-                    ...currentHistory,
-                    ...currentAsked.map(q => q.id)
-                ]);
-                const newQuestions = res.questions.filter(q => q && q.id && !askedIds.has(q.id));
+            if (res) {
+                if (res.finalSummary) {
+                    setFinalSummary(res.finalSummary);
+                }
 
-                if (newQuestions.length > 0) {
-                    setQuestionsQueue(newQuestions);
+                // CRITICAL FIX: Process questions regardless of isComplete.
+                // isComplete: false means "still have questions to ask" — this is the NORMAL state.
+                // The old condition `res.isComplete !== false` was discarding every question batch.
+                if (Array.isArray(res.questions) && res.questions.length > 0) {
+                    const askedIds = new Set([
+                        ...currentHistory,
+                        ...currentAsked.map(q => q.id)
+                    ]);
+
+                    const skippedRefs = new Set(
+                        currentAsked
+                            .filter(q => q.skipped || q.answer === 'SKIPPED')
+                            .flatMap(q => {
+                                const refs = [q.id];
+                                if (q.targetRef?.nodeId && q.targetRef?.field) {
+                                    refs.push(`${q.targetRef.nodeId}:${q.targetRef.field}`);
+                                }
+                                if (Array.isArray(q.targetPath)) {
+                                    refs.push(q.targetPath.join('.').toLowerCase());
+                                }
+                                return refs;
+                            })
+                    );
+
+                    const newQuestions = res.questions.filter(q => {
+                        // Must have an id and message to display
+                        if (!q || !q.id || !q.message) {
+                            console.warn('[BuilderPage] Discarded question missing id or message:', q);
+                            return false;
+                        }
+                        // Already answered/seen
+                        if (askedIds.has(q.id)) return false;
+                        // Precise skip anti-loop using targetRef
+                        if (q.targetRef?.nodeId && q.targetRef?.field) {
+                            if (skippedRefs.has(`${q.targetRef.nodeId}:${q.targetRef.field}`)) return false;
+                        }
+                        // Legacy path anti-loop
+                        if (Array.isArray(q.targetPath)) {
+                            if (skippedRefs.has(q.targetPath.join('.').toLowerCase())) return false;
+                        }
+                        return true;
+                    });
+
+                    console.log(`[BuilderPage] Copilot: ${res.questions.length} questions received, ${newQuestions.length} new after filter`);
+
+                    if (newQuestions.length > 0) {
+                        setQuestionsQueue(newQuestions);
+                    }
+                }
+
+                // Show completion summary when AI signals done and no new questions remain
+                if (res.isComplete && !res.finalSummary && (!Array.isArray(res.questions) || res.questions.length === 0)) {
+                    setFinalSummary({
+                        overallScore: 95,
+                        structureStatus: 'Complete & ATS-Optimized',
+                        summaryMessage: 'Your resume structure is complete and optimized for your target role!'
+                    });
                 }
             }
         } catch (err) {
@@ -154,25 +218,54 @@ const BuilderPage = () => {
     useEffect(() => {
         if (!loading && resumeData && !initialScanDone.current) {
             initialScanDone.current = true;
-            const timer = setTimeout(() => {
-                handleScanCopilot();
-            }, 600);
+            const timer = setTimeout(() => { handleScanCopilot(); }, 600);
             return () => clearTimeout(timer);
         }
     }, [loading, resumeData, handleScanCopilot]);
 
-    // Handle Question Answers (One-by-One queue progression with anti-loop memory)
+    const { deleteSection } = useResumeStore.getState();
+
+    /**
+     * Handle Question Answers — single canonical path via mutation engine.
+     * Replaced the 300-line if/else with a typed, binding-map-aware engine.
+     */
     const handleAnswerQuestion = (question, answerValue) => {
         if (!question) return;
 
-        if (question.targetPath) {
-            if (question.type === 'yes_no') {
-                if (answerValue === 'Yes' && question.proposedText) {
-                    updateField(question.targetPath, question.proposedText);
-                }
-            } else {
-                updateField(question.targetPath, answerValue);
-            }
+        const lowerAnswer = String(answerValue || '').toLowerCase().trim();
+
+        // Section deletion intent detection (unchanged — this is user intent, not AI mutation)
+        if (
+            lowerAnswer.includes('no experience') ||
+            lowerAnswer.includes('no work experience') ||
+            lowerAnswer.includes("don't have experience") ||
+            lowerAnswer.includes('dont have experience') ||
+            lowerAnswer.includes('no job') ||
+            lowerAnswer.includes('remove experience') ||
+            lowerAnswer.includes('delete experience')
+        ) {
+            deleteSection('experience');
+        } else if (
+            lowerAnswer.includes('no cert') ||
+            lowerAnswer.includes('no certification') ||
+            lowerAnswer.includes('remove certification') ||
+            lowerAnswer.includes('delete certification')
+        ) {
+            deleteSection('certifications');
+        } else if (
+            lowerAnswer.includes('no project') ||
+            lowerAnswer.includes('remove project') ||
+            lowerAnswer.includes('delete project')
+        ) {
+            deleteSection('projects');
+        }
+
+        // ── CANONICAL MUTATION via engine (replaces all the old if/else branches) ──
+        const { appliedPath } = applyAIMutation(question, answerValue);
+
+        // If mutation created a new collection item, ensure section appears in A4
+        if (appliedPath && appliedPath.length >= 1) {
+            ensureSectionInOrder(appliedPath[0]);
         }
 
         // Record Q&A and interaction ID
@@ -183,13 +276,13 @@ const BuilderPage = () => {
         // Pop current question from local queue
         popNextQuestion();
 
-        // Check if queue needs replenishment
+        // Check if queue needs replenishment — use delay to let mutation settle
         setTimeout(() => {
             const currentQueue = useResumeStore.getState().questionsQueue;
             if (!currentQueue || currentQueue.length === 0) {
                 handleScanCopilot();
             }
-        }, 150);
+        }, 200);
     };
 
     // Handle Question Skip
@@ -205,7 +298,7 @@ const BuilderPage = () => {
             if (!currentQueue || currentQueue.length === 0) {
                 handleScanCopilot();
             }
-        }, 150);
+        }, 200);
     };
 
     const togglePersona = (e) => {
@@ -319,13 +412,15 @@ const BuilderPage = () => {
                         <A4Canvas resumeData={resumeData} />
                     </div>
 
-                    {/* Single Question Bottom-Docked Card */}
-                    {activeQuestion && (
+                    {/* Single Question Bottom-Docked Card or Final Assessment Summary */}
+                    {(activeQuestion || finalSummary) && (
                         <AIQuestionCard
-                            key={activeQuestion.id || activeQuestion.questionId}
+                            key={activeQuestion ? (activeQuestion.id || activeQuestion.questionId) : 'final_summary'}
                             question={activeQuestion}
+                            finalSummary={!activeQuestion ? finalSummary : null}
                             onAnswer={handleAnswerQuestion}
                             onSkip={handleSkipQuestion}
+                            onCloseSummary={() => setFinalSummary(null)}
                             loading={scanning}
                         />
                     )}

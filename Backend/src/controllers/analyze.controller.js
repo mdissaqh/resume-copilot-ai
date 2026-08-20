@@ -49,37 +49,48 @@ export const analyzeResume = async (req, res) => {
             ]);
 
             const analysisDoc = await Analysis.create({
-                userId: req.user._id,
-                title: aiAnalysisResult.analysisTitle || "Untitled Resume Analysis",
-                extractedText: parsedText,
-                jobDescription: jobDescription || "",
+                userId:          req.user._id,
+                title:           aiAnalysisResult.analysisTitle || "Untitled Resume Analysis",
+                extractedText:   parsedText,
+                jobDescription:  jobDescription || "",
                 analysisResults: aiAnalysisResult
             });
 
+            // Persist jobDescription in resume.metadata so it's always available
+            // for Copilot audits without having to re-fetch the analysis document.
+            const resolvedMetadata = {
+                persona:        structuredResume.metadata?.persona        || 'experienced',
+                targetRole:     structuredResume.metadata?.targetRole     || '',
+                candidateLevel: structuredResume.metadata?.candidateLevel || 'mid',
+                jobType:        structuredResume.metadata?.jobType        || 'technical',
+                jobDescription: jobDescription || '',
+                jdProvided:     Boolean(jobDescription)
+            };
+
             const resumeDoc = await Resume.create({
-                userId: req.user._id,
-                analysisId: analysisDoc._id,
-                title: aiAnalysisResult.analysisTitle || "My ATS Resume",
+                userId:          req.user._id,
+                analysisId:      analysisDoc._id,
+                title:           aiAnalysisResult.analysisTitle || "My ATS Resume",
                 originalContent: rawResume || {},
-                content: structuredResume || {},
-                templateId: "evergreen",
-                schemaVersion: 3,
-                metadata: structuredResume.metadata || { persona: "experienced", targetRole: "" }
+                content:         { ...structuredResume, metadata: resolvedMetadata, schemaVersion: 3 },
+                templateId:      "evergreen",
+                schemaVersion:   3,
+                metadata:        resolvedMetadata
             });
 
             // Bi-directional linking update
             await Analysis.updateOne({ _id: analysisDoc._id }, { $set: { resumeId: resumeDoc._id } });
 
             createdAnalysisId = analysisDoc._id;
-            createdResumeId = resumeDoc._id;
+            createdResumeId   = resumeDoc._id;
         }
 
         res.status(200).json({
-            message: "Resume analyzed successfully!",
-            analysis: aiAnalysisResult,
+            message:    "Resume analyzed successfully!",
+            analysis:   aiAnalysisResult,
             parsedText: parsedText,
             analysisId: createdAnalysisId,
-            resumeId: createdResumeId
+            resumeId:   createdResumeId
         });
     } catch (error) {
         console.error("Error analyzing resume:", error);
@@ -98,10 +109,10 @@ export const migrateGuestAnalysis = async (req, res) => {
         if (existingAnalysis) return res.status(200).json({ success: true, message: "Already migrated.", analysisId: existingAnalysis._id, resumeId: existingAnalysis.resumeId });
 
         const analysisDoc = await Analysis.create({
-            userId: req.user._id,
-            title: guestData.analysisResult.analysisTitle || "Guest Resume Analysis",
-            extractedText: guestData.extractedText,
-            jobDescription: guestData.jobDescription || "",
+            userId:          req.user._id,
+            title:           guestData.analysisResult.analysisTitle || "Guest Resume Analysis",
+            extractedText:   guestData.extractedText,
+            jobDescription:  guestData.jobDescription || "",
             analysisResults: guestData.analysisResult
         });
 
